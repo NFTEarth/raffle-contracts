@@ -1,0 +1,5243 @@
+{
+	"id": "c6b79a6ac3d9e59b59a88e067e3a188f",
+	"_format": "hh-sol-build-info-1",
+	"solcVersion": "0.8.17",
+	"solcLongVersion": "0.8.17+commit.8df45f5f",
+	"input": {
+		"language": "Solidity",
+		"sources": {
+			"tenderly/project/contracts/interfaces/IRaffle.sol": {
+				"content": "// SPDX-License-Identifier: MIT\npragma solidity 0.8.17;\n\ninterface IRaffle {\n    enum RaffleStatus {\n        None,\n        Created,\n        Open,\n        Drawing,\n        RandomnessFulfilled,\n        Drawn,\n        Complete,\n        Refundable,\n        Cancelled\n    }\n\n    enum TokenType {\n        ERC721,\n        ERC1155,\n        ETH,\n        ERC20\n    }\n\n    /**\n     * @param entriesCount The number of entries that can be purchased for the given price.\n     * @param price The price of the entries.\n     */\n    struct PricingOption {\n        uint40 entriesCount;\n        uint208 price;\n    }\n\n    /**\n     * @param currentEntryIndex The cumulative number of entries in the raffle.\n     * @param participant The address of the participant.\n     */\n    struct Entry {\n        uint40 currentEntryIndex;\n        address participant;\n    }\n\n    /**\n     * @param participant The address of the winner.\n     * @param claimed Whether the winner has claimed the prize.\n     * @param prizeIndex The index of the prize that was won.\n     * @param entryIndex The index of the entry that won.\n     */\n    struct Winner {\n        address participant;\n        bool claimed;\n        uint8 prizeIndex;\n        uint40 entryIndex;\n    }\n\n    /**\n     * @param winnersCount The number of winners.\n     * @param cumulativeWinnersCount The cumulative number of winners in the raffle.\n     * @param prizeType The type of the prize.\n     * @param prizeTier The tier of the prize.\n     * @param prizeAddress The address of the prize.\n     * @param prizeId The id of the prize.\n     * @param prizeAmount The amount of the prize.\n     */\n    struct Prize {\n        uint40 winnersCount;\n        uint40 cumulativeWinnersCount;\n        TokenType prizeType;\n        uint8 prizeTier;\n        address prizeAddress;\n        uint256 prizeId;\n        uint256 prizeAmount;\n    }\n\n    /**\n     * @param owner The address of the raffle owner.\n     * @param status The status of the raffle.\n     * @param isMinimumEntriesFixed Whether the minimum number of entries is fixed.\n     * @param cutoffTime The time after which the raffle cannot be entered.\n     * @param drawnAt The time at which the raffle was drawn. It is still pending Chainlink to fulfill the randomness request.\n     * @param minimumEntries The minimum number of entries required to draw the raffle.\n     * @param maximumEntriesPerParticipant The maximum number of entries allowed per participant.\n     * @param feeTokenAddress The address of the token to be used as a fee. If the fee token type is ETH, then this address is ignored.\n     * @param protocolFeeBp The protocol fee in basis points. It must be equal to the protocol fee basis points when the raffle was created.\n     * @param claimableFees The amount of fees collected from selling entries.\n     * @param pricingOptions The pricing options for the raffle.\n     * @param prizes The prizes to be distributed.\n     * @param entries The entries that have been sold.\n     * @param winners The winners of the raffle.\n     */\n    struct Raffle {\n        address owner;\n        RaffleStatus status;\n        bool isMinimumEntriesFixed;\n        uint40 cutoffTime;\n        uint40 drawnAt;\n        uint40 minimumEntries;\n        uint40 maximumEntriesPerParticipant;\n        address feeTokenAddress;\n        uint16 protocolFeeBp;\n        uint208 claimableFees;\n        PricingOption[5] pricingOptions;\n        Prize[] prizes;\n        Entry[] entries;\n        Winner[] winners;\n    }\n\n    /**\n     * @param amountPaid The amount paid by the participant.\n     * @param entriesCount The number of entries purchased by the participant.\n     * @param refunded Whether the participant has been refunded.\n     */\n    struct ParticipantStats {\n        uint208 amountPaid;\n        uint40 entriesCount;\n        bool refunded;\n    }\n\n    /**\n     * @param raffleId The id of the raffle.\n     * @param pricingOptionIndex The index of the selected pricing option.\n     */\n    struct EntryCalldata {\n        uint256 raffleId;\n        uint256 pricingOptionIndex;\n    }\n\n    /**\n     * @param cutoffTime The time at which the raffle will be closed.\n     * @param minimumEntries The minimum number of entries required to draw the raffle.\n     * @param isMinimumEntriesFixed Whether the minimum number of entries is fixed.\n     * @param maximumEntriesPerParticipant The maximum number of entries allowed per participant.\n     * @param protocolFeeBp The protocol fee in basis points. It must be equal to the protocol fee basis points when the raffle was created.\n     * @param feeTokenAddress The address of the token to be used as a fee. If the fee token type is ETH, then this address is ignored.\n     * @param prizes The prizes to be distributed.\n     * @param pricingOptions The pricing options for the raffle.\n     */\n    struct CreateRaffleCalldata {\n        uint40 cutoffTime;\n        bool isMinimumEntriesFixed;\n        uint40 minimumEntries;\n        uint40 maximumEntriesPerParticipant;\n        uint16 protocolFeeBp;\n        address feeTokenAddress;\n        Prize[] prizes;\n        PricingOption[5] pricingOptions;\n    }\n\n    struct ClaimPrizesCalldata {\n        uint256 raffleId;\n        uint256[] winnerIndices;\n    }\n\n    /**\n     * @param exists Whether the request exists.\n     * @param raffleId The id of the raffle.\n     * @param randomWord The random words returned by Chainlink VRF.\n     *                   If randomWord == 0, then the request is still pending.\n     */\n    struct RandomnessRequest {\n        bool exists;\n        uint248 randomWord;\n        uint256 raffleId;\n    }\n\n    event CurrenciesStatusUpdated(address[] currencies, bool isAllowed);\n    event EntryRefunded(uint256 raffleId, address buyer, uint208 amount);\n    event EntrySold(uint256 raffleId, address buyer, uint40 entriesCount, uint208 price);\n    event FeesClaimed(uint256 raffleId, uint256 amount);\n    event PrizesClaimed(uint256 raffleId, uint256[] winnerIndex);\n    event ProtocolFeeBpUpdated(uint16 protocolFeeBp);\n    event ProtocolFeeRecipientUpdated(address protocolFeeRecipient);\n    event RaffleStatusUpdated(uint256 raffleId, RaffleStatus status);\n    event RandomnessRequested(uint256 raffleId, uint256 requestId);\n\n    error AlreadyRefunded();\n    error CutoffTimeNotReached();\n    error CutoffTimeReached();\n    error DrawExpirationTimeNotReached();\n    error InsufficientNativeTokensSupplied();\n    error InvalidCaller();\n    error InvalidCurrency();\n    error InvalidCutoffTime();\n    error InvalidIndex();\n    error InvalidPricingOption();\n    error InvalidPrize();\n    error InvalidPrizesCount();\n    error InvalidProtocolFeeBp();\n    error InvalidProtocolFeeRecipient();\n    error InvalidStatus();\n    error InvalidWinnersCount();\n    error MaximumEntriesPerParticipantReached();\n    error MaximumEntriesReached();\n    error PrizeAlreadyClaimed();\n    error RandomnessRequestAlreadyExists();\n    error RandomnessRequestDoesNotExist();\n\n    /**\n     * @notice Creates a new raffle.\n     * @param params The parameters of the raffle.\n     * @return raffleId The id of the newly created raffle.\n     */\n    function createRaffle(CreateRaffleCalldata calldata params) external returns (uint256 raffleId);\n\n    /**\n     * @notice Deposits prizes for a raffle.\n     * @param raffleId The id of the raffle.\n     */\n    function depositPrizes(uint256 raffleId) external payable;\n\n    /**\n     * @notice Enters a raffle or multiple raffles.\n     * @param entries The entries to be made.\n     */\n    function enterRaffles(EntryCalldata[] calldata entries) external payable;\n\n    /**\n     * @notice Select the winners for a raffle based on the random words returned by Chainlink.\n     * @param requestId The request id returned by Chainlink.\n     */\n    function selectWinners(uint256 requestId) external;\n\n    /**\n     * @notice Claims the prizes for a winner. A winner can claim multiple prizes\n     *         from multiple raffles in a single transaction.\n     * @param claimPrizesCalldata The calldata for claiming prizes.\n     */\n    function claimPrizes(ClaimPrizesCalldata[] calldata claimPrizesCalldata) external;\n\n    /**\n     * @notice Claims the fees collected for a raffle.\n     * @param raffleId The id of the raffle.\n     */\n    function claimFees(uint256 raffleId) external;\n\n    /**\n     * @notice Cancels a raffle beyond cut-off time without meeting minimum entries.\n     * @param raffleId The id of the raffle.\n     */\n    function cancel(uint256 raffleId) external;\n\n    /**\n     * @notice Cancels a raffle after randomness request if the randomness request\n     *         does not arrive after a certain amount of time.\n     *         Only callable by contract owner.\n     * @param raffleId The id of the raffle.\n     */\n    function cancelAfterRandomnessRequest(uint256 raffleId) external;\n\n    /**\n     * @notice Withdraws the prizes for a raffle after it has been marked as refundable.\n     * @param raffleId The id of the raffle.\n     */\n    function withdrawPrizes(uint256 raffleId) external;\n\n    /**\n     * @notice Claims the refund for a cancelled raffle.\n     * @param raffleIds The ids of the raffles.\n     */\n    function claimRefund(uint256[] calldata raffleIds) external;\n\n    /**\n     * @notice Claims the protocol fees collected for a raffle.\n     * @param currency The currency of the fees to be claimed.\n     */\n    function claimProtocolFees(address currency) external;\n\n    /**\n     * @notice Sets the protocol fee in basis points. Only callable by contract owner.\n     * @param protocolFeeBp The protocol fee in basis points.\n     */\n    function setProtocolFeeBp(uint16 protocolFeeBp) external;\n\n    /**\n     * @notice Sets the protocol fee recipient. Only callable by contract owner.\n     * @param protocolFeeRecipient The protocol fee recipient.\n     */\n    function setProtocolFeeRecipient(address protocolFeeRecipient) external;\n\n    /**\n     * @notice This function allows the owner to update currency statuses.\n     * @param currencies Currency addresses (address(0) for ETH)\n     * @param isAllowed Whether the currencies should be allowed for trading\n     * @dev Only callable by owner.\n     */\n    function updateCurrenciesStatus(address[] calldata currencies, bool isAllowed) external;\n\n    /**\n     * @notice Toggle the contract's paused status. Only callable by contract owner.\n     */\n    function togglePaused() external;\n\n    /**\n     * @notice Gets the winners for a raffle.\n     * @param raffleId The id of the raffle.\n     * @return winners The winners of the raffle.\n     */\n    function getWinners(uint256 raffleId) external view returns (Winner[] memory);\n\n    /**\n     * @notice Gets the pricing options for a raffle.\n     * @param raffleId The id of the raffle.\n     * @return pricingOptions The pricing options for the raffle.\n     */\n    function getPricingOptions(uint256 raffleId) external view returns (PricingOption[5] memory);\n\n    /**\n     * @notice Gets the prizes for a raffle.\n     * @param raffleId The id of the raffle.\n     * @return prizes The prizes to be distributed.\n     */\n    function getPrizes(uint256 raffleId) external view returns (Prize[] memory);\n\n    /**\n     * @notice Gets the entries for a raffle.\n     * @param raffleId The id of the raffle.\n     * @return entries The entries entered for the raffle.\n     */\n    function getEntries(uint256 raffleId) external view returns (Entry[] memory);\n}\n"
+			}
+		},
+		"settings": {
+			"optimizer": {
+				"enabled": true,
+				"runs": 200
+			},
+			"outputSelection": {
+				"*": {
+					"": [
+						"ast"
+					],
+					"*": [
+						"abi",
+						"metadata",
+						"devdoc",
+						"userdoc",
+						"storageLayout",
+						"evm.legacyAssembly",
+						"evm.bytecode",
+						"evm.deployedBytecode",
+						"evm.methodIdentifiers",
+						"evm.gasEstimates",
+						"evm.assembly"
+					]
+				}
+			}
+		}
+	},
+	"output": {
+		"contracts": {
+			"tenderly/project/contracts/interfaces/IRaffle.sol": {
+				"IRaffle": {
+					"abi": [
+						{
+							"inputs": [],
+							"name": "AlreadyRefunded",
+							"type": "error"
+						},
+						{
+							"inputs": [],
+							"name": "CutoffTimeNotReached",
+							"type": "error"
+						},
+						{
+							"inputs": [],
+							"name": "CutoffTimeReached",
+							"type": "error"
+						},
+						{
+							"inputs": [],
+							"name": "DrawExpirationTimeNotReached",
+							"type": "error"
+						},
+						{
+							"inputs": [],
+							"name": "InsufficientNativeTokensSupplied",
+							"type": "error"
+						},
+						{
+							"inputs": [],
+							"name": "InvalidCaller",
+							"type": "error"
+						},
+						{
+							"inputs": [],
+							"name": "InvalidCurrency",
+							"type": "error"
+						},
+						{
+							"inputs": [],
+							"name": "InvalidCutoffTime",
+							"type": "error"
+						},
+						{
+							"inputs": [],
+							"name": "InvalidIndex",
+							"type": "error"
+						},
+						{
+							"inputs": [],
+							"name": "InvalidPricingOption",
+							"type": "error"
+						},
+						{
+							"inputs": [],
+							"name": "InvalidPrize",
+							"type": "error"
+						},
+						{
+							"inputs": [],
+							"name": "InvalidPrizesCount",
+							"type": "error"
+						},
+						{
+							"inputs": [],
+							"name": "InvalidProtocolFeeBp",
+							"type": "error"
+						},
+						{
+							"inputs": [],
+							"name": "InvalidProtocolFeeRecipient",
+							"type": "error"
+						},
+						{
+							"inputs": [],
+							"name": "InvalidStatus",
+							"type": "error"
+						},
+						{
+							"inputs": [],
+							"name": "InvalidWinnersCount",
+							"type": "error"
+						},
+						{
+							"inputs": [],
+							"name": "MaximumEntriesPerParticipantReached",
+							"type": "error"
+						},
+						{
+							"inputs": [],
+							"name": "MaximumEntriesReached",
+							"type": "error"
+						},
+						{
+							"inputs": [],
+							"name": "PrizeAlreadyClaimed",
+							"type": "error"
+						},
+						{
+							"inputs": [],
+							"name": "RandomnessRequestAlreadyExists",
+							"type": "error"
+						},
+						{
+							"inputs": [],
+							"name": "RandomnessRequestDoesNotExist",
+							"type": "error"
+						},
+						{
+							"anonymous": false,
+							"inputs": [
+								{
+									"indexed": false,
+									"internalType": "address[]",
+									"name": "currencies",
+									"type": "address[]"
+								},
+								{
+									"indexed": false,
+									"internalType": "bool",
+									"name": "isAllowed",
+									"type": "bool"
+								}
+							],
+							"name": "CurrenciesStatusUpdated",
+							"type": "event"
+						},
+						{
+							"anonymous": false,
+							"inputs": [
+								{
+									"indexed": false,
+									"internalType": "uint256",
+									"name": "raffleId",
+									"type": "uint256"
+								},
+								{
+									"indexed": false,
+									"internalType": "address",
+									"name": "buyer",
+									"type": "address"
+								},
+								{
+									"indexed": false,
+									"internalType": "uint208",
+									"name": "amount",
+									"type": "uint208"
+								}
+							],
+							"name": "EntryRefunded",
+							"type": "event"
+						},
+						{
+							"anonymous": false,
+							"inputs": [
+								{
+									"indexed": false,
+									"internalType": "uint256",
+									"name": "raffleId",
+									"type": "uint256"
+								},
+								{
+									"indexed": false,
+									"internalType": "address",
+									"name": "buyer",
+									"type": "address"
+								},
+								{
+									"indexed": false,
+									"internalType": "uint40",
+									"name": "entriesCount",
+									"type": "uint40"
+								},
+								{
+									"indexed": false,
+									"internalType": "uint208",
+									"name": "price",
+									"type": "uint208"
+								}
+							],
+							"name": "EntrySold",
+							"type": "event"
+						},
+						{
+							"anonymous": false,
+							"inputs": [
+								{
+									"indexed": false,
+									"internalType": "uint256",
+									"name": "raffleId",
+									"type": "uint256"
+								},
+								{
+									"indexed": false,
+									"internalType": "uint256",
+									"name": "amount",
+									"type": "uint256"
+								}
+							],
+							"name": "FeesClaimed",
+							"type": "event"
+						},
+						{
+							"anonymous": false,
+							"inputs": [
+								{
+									"indexed": false,
+									"internalType": "uint256",
+									"name": "raffleId",
+									"type": "uint256"
+								},
+								{
+									"indexed": false,
+									"internalType": "uint256[]",
+									"name": "winnerIndex",
+									"type": "uint256[]"
+								}
+							],
+							"name": "PrizesClaimed",
+							"type": "event"
+						},
+						{
+							"anonymous": false,
+							"inputs": [
+								{
+									"indexed": false,
+									"internalType": "uint16",
+									"name": "protocolFeeBp",
+									"type": "uint16"
+								}
+							],
+							"name": "ProtocolFeeBpUpdated",
+							"type": "event"
+						},
+						{
+							"anonymous": false,
+							"inputs": [
+								{
+									"indexed": false,
+									"internalType": "address",
+									"name": "protocolFeeRecipient",
+									"type": "address"
+								}
+							],
+							"name": "ProtocolFeeRecipientUpdated",
+							"type": "event"
+						},
+						{
+							"anonymous": false,
+							"inputs": [
+								{
+									"indexed": false,
+									"internalType": "uint256",
+									"name": "raffleId",
+									"type": "uint256"
+								},
+								{
+									"indexed": false,
+									"internalType": "enum IRaffle.RaffleStatus",
+									"name": "status",
+									"type": "uint8"
+								}
+							],
+							"name": "RaffleStatusUpdated",
+							"type": "event"
+						},
+						{
+							"anonymous": false,
+							"inputs": [
+								{
+									"indexed": false,
+									"internalType": "uint256",
+									"name": "raffleId",
+									"type": "uint256"
+								},
+								{
+									"indexed": false,
+									"internalType": "uint256",
+									"name": "requestId",
+									"type": "uint256"
+								}
+							],
+							"name": "RandomnessRequested",
+							"type": "event"
+						},
+						{
+							"inputs": [
+								{
+									"internalType": "uint256",
+									"name": "raffleId",
+									"type": "uint256"
+								}
+							],
+							"name": "cancel",
+							"outputs": [],
+							"stateMutability": "nonpayable",
+							"type": "function"
+						},
+						{
+							"inputs": [
+								{
+									"internalType": "uint256",
+									"name": "raffleId",
+									"type": "uint256"
+								}
+							],
+							"name": "cancelAfterRandomnessRequest",
+							"outputs": [],
+							"stateMutability": "nonpayable",
+							"type": "function"
+						},
+						{
+							"inputs": [
+								{
+									"internalType": "uint256",
+									"name": "raffleId",
+									"type": "uint256"
+								}
+							],
+							"name": "claimFees",
+							"outputs": [],
+							"stateMutability": "nonpayable",
+							"type": "function"
+						},
+						{
+							"inputs": [
+								{
+									"components": [
+										{
+											"internalType": "uint256",
+											"name": "raffleId",
+											"type": "uint256"
+										},
+										{
+											"internalType": "uint256[]",
+											"name": "winnerIndices",
+											"type": "uint256[]"
+										}
+									],
+									"internalType": "struct IRaffle.ClaimPrizesCalldata[]",
+									"name": "claimPrizesCalldata",
+									"type": "tuple[]"
+								}
+							],
+							"name": "claimPrizes",
+							"outputs": [],
+							"stateMutability": "nonpayable",
+							"type": "function"
+						},
+						{
+							"inputs": [
+								{
+									"internalType": "address",
+									"name": "currency",
+									"type": "address"
+								}
+							],
+							"name": "claimProtocolFees",
+							"outputs": [],
+							"stateMutability": "nonpayable",
+							"type": "function"
+						},
+						{
+							"inputs": [
+								{
+									"internalType": "uint256[]",
+									"name": "raffleIds",
+									"type": "uint256[]"
+								}
+							],
+							"name": "claimRefund",
+							"outputs": [],
+							"stateMutability": "nonpayable",
+							"type": "function"
+						},
+						{
+							"inputs": [
+								{
+									"components": [
+										{
+											"internalType": "uint40",
+											"name": "cutoffTime",
+											"type": "uint40"
+										},
+										{
+											"internalType": "bool",
+											"name": "isMinimumEntriesFixed",
+											"type": "bool"
+										},
+										{
+											"internalType": "uint40",
+											"name": "minimumEntries",
+											"type": "uint40"
+										},
+										{
+											"internalType": "uint40",
+											"name": "maximumEntriesPerParticipant",
+											"type": "uint40"
+										},
+										{
+											"internalType": "uint16",
+											"name": "protocolFeeBp",
+											"type": "uint16"
+										},
+										{
+											"internalType": "address",
+											"name": "feeTokenAddress",
+											"type": "address"
+										},
+										{
+											"components": [
+												{
+													"internalType": "uint40",
+													"name": "winnersCount",
+													"type": "uint40"
+												},
+												{
+													"internalType": "uint40",
+													"name": "cumulativeWinnersCount",
+													"type": "uint40"
+												},
+												{
+													"internalType": "enum IRaffle.TokenType",
+													"name": "prizeType",
+													"type": "uint8"
+												},
+												{
+													"internalType": "uint8",
+													"name": "prizeTier",
+													"type": "uint8"
+												},
+												{
+													"internalType": "address",
+													"name": "prizeAddress",
+													"type": "address"
+												},
+												{
+													"internalType": "uint256",
+													"name": "prizeId",
+													"type": "uint256"
+												},
+												{
+													"internalType": "uint256",
+													"name": "prizeAmount",
+													"type": "uint256"
+												}
+											],
+											"internalType": "struct IRaffle.Prize[]",
+											"name": "prizes",
+											"type": "tuple[]"
+										},
+										{
+											"components": [
+												{
+													"internalType": "uint40",
+													"name": "entriesCount",
+													"type": "uint40"
+												},
+												{
+													"internalType": "uint208",
+													"name": "price",
+													"type": "uint208"
+												}
+											],
+											"internalType": "struct IRaffle.PricingOption[5]",
+											"name": "pricingOptions",
+											"type": "tuple[5]"
+										}
+									],
+									"internalType": "struct IRaffle.CreateRaffleCalldata",
+									"name": "params",
+									"type": "tuple"
+								}
+							],
+							"name": "createRaffle",
+							"outputs": [
+								{
+									"internalType": "uint256",
+									"name": "raffleId",
+									"type": "uint256"
+								}
+							],
+							"stateMutability": "nonpayable",
+							"type": "function"
+						},
+						{
+							"inputs": [
+								{
+									"internalType": "uint256",
+									"name": "raffleId",
+									"type": "uint256"
+								}
+							],
+							"name": "depositPrizes",
+							"outputs": [],
+							"stateMutability": "payable",
+							"type": "function"
+						},
+						{
+							"inputs": [
+								{
+									"components": [
+										{
+											"internalType": "uint256",
+											"name": "raffleId",
+											"type": "uint256"
+										},
+										{
+											"internalType": "uint256",
+											"name": "pricingOptionIndex",
+											"type": "uint256"
+										}
+									],
+									"internalType": "struct IRaffle.EntryCalldata[]",
+									"name": "entries",
+									"type": "tuple[]"
+								}
+							],
+							"name": "enterRaffles",
+							"outputs": [],
+							"stateMutability": "payable",
+							"type": "function"
+						},
+						{
+							"inputs": [
+								{
+									"internalType": "uint256",
+									"name": "raffleId",
+									"type": "uint256"
+								}
+							],
+							"name": "getEntries",
+							"outputs": [
+								{
+									"components": [
+										{
+											"internalType": "uint40",
+											"name": "currentEntryIndex",
+											"type": "uint40"
+										},
+										{
+											"internalType": "address",
+											"name": "participant",
+											"type": "address"
+										}
+									],
+									"internalType": "struct IRaffle.Entry[]",
+									"name": "",
+									"type": "tuple[]"
+								}
+							],
+							"stateMutability": "view",
+							"type": "function"
+						},
+						{
+							"inputs": [
+								{
+									"internalType": "uint256",
+									"name": "raffleId",
+									"type": "uint256"
+								}
+							],
+							"name": "getPricingOptions",
+							"outputs": [
+								{
+									"components": [
+										{
+											"internalType": "uint40",
+											"name": "entriesCount",
+											"type": "uint40"
+										},
+										{
+											"internalType": "uint208",
+											"name": "price",
+											"type": "uint208"
+										}
+									],
+									"internalType": "struct IRaffle.PricingOption[5]",
+									"name": "",
+									"type": "tuple[5]"
+								}
+							],
+							"stateMutability": "view",
+							"type": "function"
+						},
+						{
+							"inputs": [
+								{
+									"internalType": "uint256",
+									"name": "raffleId",
+									"type": "uint256"
+								}
+							],
+							"name": "getPrizes",
+							"outputs": [
+								{
+									"components": [
+										{
+											"internalType": "uint40",
+											"name": "winnersCount",
+											"type": "uint40"
+										},
+										{
+											"internalType": "uint40",
+											"name": "cumulativeWinnersCount",
+											"type": "uint40"
+										},
+										{
+											"internalType": "enum IRaffle.TokenType",
+											"name": "prizeType",
+											"type": "uint8"
+										},
+										{
+											"internalType": "uint8",
+											"name": "prizeTier",
+											"type": "uint8"
+										},
+										{
+											"internalType": "address",
+											"name": "prizeAddress",
+											"type": "address"
+										},
+										{
+											"internalType": "uint256",
+											"name": "prizeId",
+											"type": "uint256"
+										},
+										{
+											"internalType": "uint256",
+											"name": "prizeAmount",
+											"type": "uint256"
+										}
+									],
+									"internalType": "struct IRaffle.Prize[]",
+									"name": "",
+									"type": "tuple[]"
+								}
+							],
+							"stateMutability": "view",
+							"type": "function"
+						},
+						{
+							"inputs": [
+								{
+									"internalType": "uint256",
+									"name": "raffleId",
+									"type": "uint256"
+								}
+							],
+							"name": "getWinners",
+							"outputs": [
+								{
+									"components": [
+										{
+											"internalType": "address",
+											"name": "participant",
+											"type": "address"
+										},
+										{
+											"internalType": "bool",
+											"name": "claimed",
+											"type": "bool"
+										},
+										{
+											"internalType": "uint8",
+											"name": "prizeIndex",
+											"type": "uint8"
+										},
+										{
+											"internalType": "uint40",
+											"name": "entryIndex",
+											"type": "uint40"
+										}
+									],
+									"internalType": "struct IRaffle.Winner[]",
+									"name": "",
+									"type": "tuple[]"
+								}
+							],
+							"stateMutability": "view",
+							"type": "function"
+						},
+						{
+							"inputs": [
+								{
+									"internalType": "uint256",
+									"name": "requestId",
+									"type": "uint256"
+								}
+							],
+							"name": "selectWinners",
+							"outputs": [],
+							"stateMutability": "nonpayable",
+							"type": "function"
+						},
+						{
+							"inputs": [
+								{
+									"internalType": "uint16",
+									"name": "protocolFeeBp",
+									"type": "uint16"
+								}
+							],
+							"name": "setProtocolFeeBp",
+							"outputs": [],
+							"stateMutability": "nonpayable",
+							"type": "function"
+						},
+						{
+							"inputs": [
+								{
+									"internalType": "address",
+									"name": "protocolFeeRecipient",
+									"type": "address"
+								}
+							],
+							"name": "setProtocolFeeRecipient",
+							"outputs": [],
+							"stateMutability": "nonpayable",
+							"type": "function"
+						},
+						{
+							"inputs": [],
+							"name": "togglePaused",
+							"outputs": [],
+							"stateMutability": "nonpayable",
+							"type": "function"
+						},
+						{
+							"inputs": [
+								{
+									"internalType": "address[]",
+									"name": "currencies",
+									"type": "address[]"
+								},
+								{
+									"internalType": "bool",
+									"name": "isAllowed",
+									"type": "bool"
+								}
+							],
+							"name": "updateCurrenciesStatus",
+							"outputs": [],
+							"stateMutability": "nonpayable",
+							"type": "function"
+						},
+						{
+							"inputs": [
+								{
+									"internalType": "uint256",
+									"name": "raffleId",
+									"type": "uint256"
+								}
+							],
+							"name": "withdrawPrizes",
+							"outputs": [],
+							"stateMutability": "nonpayable",
+							"type": "function"
+						}
+					],
+					"devdoc": {
+						"kind": "dev",
+						"methods": {
+							"cancel(uint256)": {
+								"params": {
+									"raffleId": "The id of the raffle."
+								}
+							},
+							"cancelAfterRandomnessRequest(uint256)": {
+								"params": {
+									"raffleId": "The id of the raffle."
+								}
+							},
+							"claimFees(uint256)": {
+								"params": {
+									"raffleId": "The id of the raffle."
+								}
+							},
+							"claimPrizes((uint256,uint256[])[])": {
+								"params": {
+									"claimPrizesCalldata": "The calldata for claiming prizes."
+								}
+							},
+							"claimProtocolFees(address)": {
+								"params": {
+									"currency": "The currency of the fees to be claimed."
+								}
+							},
+							"claimRefund(uint256[])": {
+								"params": {
+									"raffleIds": "The ids of the raffles."
+								}
+							},
+							"createRaffle((uint40,bool,uint40,uint40,uint16,address,(uint40,uint40,uint8,uint8,address,uint256,uint256)[],(uint40,uint208)[5]))": {
+								"params": {
+									"params": "The parameters of the raffle."
+								},
+								"returns": {
+									"raffleId": "The id of the newly created raffle."
+								}
+							},
+							"depositPrizes(uint256)": {
+								"params": {
+									"raffleId": "The id of the raffle."
+								}
+							},
+							"enterRaffles((uint256,uint256)[])": {
+								"params": {
+									"entries": "The entries to be made."
+								}
+							},
+							"getEntries(uint256)": {
+								"params": {
+									"raffleId": "The id of the raffle."
+								},
+								"returns": {
+									"_0": "entries The entries entered for the raffle."
+								}
+							},
+							"getPricingOptions(uint256)": {
+								"params": {
+									"raffleId": "The id of the raffle."
+								},
+								"returns": {
+									"_0": "pricingOptions The pricing options for the raffle."
+								}
+							},
+							"getPrizes(uint256)": {
+								"params": {
+									"raffleId": "The id of the raffle."
+								},
+								"returns": {
+									"_0": "prizes The prizes to be distributed."
+								}
+							},
+							"getWinners(uint256)": {
+								"params": {
+									"raffleId": "The id of the raffle."
+								},
+								"returns": {
+									"_0": "winners The winners of the raffle."
+								}
+							},
+							"selectWinners(uint256)": {
+								"params": {
+									"requestId": "The request id returned by Chainlink."
+								}
+							},
+							"setProtocolFeeBp(uint16)": {
+								"params": {
+									"protocolFeeBp": "The protocol fee in basis points."
+								}
+							},
+							"setProtocolFeeRecipient(address)": {
+								"params": {
+									"protocolFeeRecipient": "The protocol fee recipient."
+								}
+							},
+							"updateCurrenciesStatus(address[],bool)": {
+								"details": "Only callable by owner.",
+								"params": {
+									"currencies": "Currency addresses (address(0) for ETH)",
+									"isAllowed": "Whether the currencies should be allowed for trading"
+								}
+							},
+							"withdrawPrizes(uint256)": {
+								"params": {
+									"raffleId": "The id of the raffle."
+								}
+							}
+						},
+						"version": 1
+					},
+					"evm": {
+						"assembly": "",
+						"bytecode": {
+							"functionDebugData": {},
+							"generatedSources": [],
+							"linkReferences": {},
+							"object": "",
+							"opcodes": "",
+							"sourceMap": ""
+						},
+						"deployedBytecode": {
+							"functionDebugData": {},
+							"generatedSources": [],
+							"immutableReferences": {},
+							"linkReferences": {},
+							"object": "",
+							"opcodes": "",
+							"sourceMap": ""
+						},
+						"gasEstimates": null,
+						"legacyAssembly": null,
+						"methodIdentifiers": {
+							"cancel(uint256)": "40e58ee5",
+							"cancelAfterRandomnessRequest(uint256)": "a72844ba",
+							"claimFees(uint256)": "ac68a748",
+							"claimPrizes((uint256,uint256[])[])": "6f30d7b5",
+							"claimProtocolFees(address)": "69ce6d47",
+							"claimRefund(uint256[])": "f54a6f83",
+							"createRaffle((uint40,bool,uint40,uint40,uint16,address,(uint40,uint40,uint8,uint8,address,uint256,uint256)[],(uint40,uint208)[5]))": "d49a5630",
+							"depositPrizes(uint256)": "82d6848c",
+							"enterRaffles((uint256,uint256)[])": "f42df132",
+							"getEntries(uint256)": "d3549ebd",
+							"getPricingOptions(uint256)": "31fe74a9",
+							"getPrizes(uint256)": "cc307795",
+							"getWinners(uint256)": "6b1426a4",
+							"selectWinners(uint256)": "39a2eb2a",
+							"setProtocolFeeBp(uint16)": "2a6a4eb8",
+							"setProtocolFeeRecipient(address)": "e521cb92",
+							"togglePaused()": "36566f06",
+							"updateCurrenciesStatus(address[],bool)": "1e9f1a82",
+							"withdrawPrizes(uint256)": "534fff0e"
+						}
+					},
+					"metadata": "{\"compiler\":{\"version\":\"0.8.17+commit.8df45f5f\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"AlreadyRefunded\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"CutoffTimeNotReached\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"CutoffTimeReached\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"DrawExpirationTimeNotReached\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InsufficientNativeTokensSupplied\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidCaller\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidCurrency\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidCutoffTime\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidIndex\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidPricingOption\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidPrize\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidPrizesCount\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidProtocolFeeBp\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidProtocolFeeRecipient\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidStatus\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidWinnersCount\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"MaximumEntriesPerParticipantReached\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"MaximumEntriesReached\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"PrizeAlreadyClaimed\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"RandomnessRequestAlreadyExists\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"RandomnessRequestDoesNotExist\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"currencies\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isAllowed\",\"type\":\"bool\"}],\"name\":\"CurrenciesStatusUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"raffleId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"buyer\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint208\",\"name\":\"amount\",\"type\":\"uint208\"}],\"name\":\"EntryRefunded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"raffleId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"buyer\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint40\",\"name\":\"entriesCount\",\"type\":\"uint40\"},{\"indexed\":false,\"internalType\":\"uint208\",\"name\":\"price\",\"type\":\"uint208\"}],\"name\":\"EntrySold\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"raffleId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"FeesClaimed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"raffleId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256[]\",\"name\":\"winnerIndex\",\"type\":\"uint256[]\"}],\"name\":\"PrizesClaimed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint16\",\"name\":\"protocolFeeBp\",\"type\":\"uint16\"}],\"name\":\"ProtocolFeeBpUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"protocolFeeRecipient\",\"type\":\"address\"}],\"name\":\"ProtocolFeeRecipientUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"raffleId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"enum IRaffle.RaffleStatus\",\"name\":\"status\",\"type\":\"uint8\"}],\"name\":\"RaffleStatusUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"raffleId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"requestId\",\"type\":\"uint256\"}],\"name\":\"RandomnessRequested\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"raffleId\",\"type\":\"uint256\"}],\"name\":\"cancel\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"raffleId\",\"type\":\"uint256\"}],\"name\":\"cancelAfterRandomnessRequest\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"raffleId\",\"type\":\"uint256\"}],\"name\":\"claimFees\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"raffleId\",\"type\":\"uint256\"},{\"internalType\":\"uint256[]\",\"name\":\"winnerIndices\",\"type\":\"uint256[]\"}],\"internalType\":\"struct IRaffle.ClaimPrizesCalldata[]\",\"name\":\"claimPrizesCalldata\",\"type\":\"tuple[]\"}],\"name\":\"claimPrizes\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"currency\",\"type\":\"address\"}],\"name\":\"claimProtocolFees\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256[]\",\"name\":\"raffleIds\",\"type\":\"uint256[]\"}],\"name\":\"claimRefund\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint40\",\"name\":\"cutoffTime\",\"type\":\"uint40\"},{\"internalType\":\"bool\",\"name\":\"isMinimumEntriesFixed\",\"type\":\"bool\"},{\"internalType\":\"uint40\",\"name\":\"minimumEntries\",\"type\":\"uint40\"},{\"internalType\":\"uint40\",\"name\":\"maximumEntriesPerParticipant\",\"type\":\"uint40\"},{\"internalType\":\"uint16\",\"name\":\"protocolFeeBp\",\"type\":\"uint16\"},{\"internalType\":\"address\",\"name\":\"feeTokenAddress\",\"type\":\"address\"},{\"components\":[{\"internalType\":\"uint40\",\"name\":\"winnersCount\",\"type\":\"uint40\"},{\"internalType\":\"uint40\",\"name\":\"cumulativeWinnersCount\",\"type\":\"uint40\"},{\"internalType\":\"enum IRaffle.TokenType\",\"name\":\"prizeType\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"prizeTier\",\"type\":\"uint8\"},{\"internalType\":\"address\",\"name\":\"prizeAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"prizeId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"prizeAmount\",\"type\":\"uint256\"}],\"internalType\":\"struct IRaffle.Prize[]\",\"name\":\"prizes\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint40\",\"name\":\"entriesCount\",\"type\":\"uint40\"},{\"internalType\":\"uint208\",\"name\":\"price\",\"type\":\"uint208\"}],\"internalType\":\"struct IRaffle.PricingOption[5]\",\"name\":\"pricingOptions\",\"type\":\"tuple[5]\"}],\"internalType\":\"struct IRaffle.CreateRaffleCalldata\",\"name\":\"params\",\"type\":\"tuple\"}],\"name\":\"createRaffle\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"raffleId\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"raffleId\",\"type\":\"uint256\"}],\"name\":\"depositPrizes\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"raffleId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"pricingOptionIndex\",\"type\":\"uint256\"}],\"internalType\":\"struct IRaffle.EntryCalldata[]\",\"name\":\"entries\",\"type\":\"tuple[]\"}],\"name\":\"enterRaffles\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"raffleId\",\"type\":\"uint256\"}],\"name\":\"getEntries\",\"outputs\":[{\"components\":[{\"internalType\":\"uint40\",\"name\":\"currentEntryIndex\",\"type\":\"uint40\"},{\"internalType\":\"address\",\"name\":\"participant\",\"type\":\"address\"}],\"internalType\":\"struct IRaffle.Entry[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"raffleId\",\"type\":\"uint256\"}],\"name\":\"getPricingOptions\",\"outputs\":[{\"components\":[{\"internalType\":\"uint40\",\"name\":\"entriesCount\",\"type\":\"uint40\"},{\"internalType\":\"uint208\",\"name\":\"price\",\"type\":\"uint208\"}],\"internalType\":\"struct IRaffle.PricingOption[5]\",\"name\":\"\",\"type\":\"tuple[5]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"raffleId\",\"type\":\"uint256\"}],\"name\":\"getPrizes\",\"outputs\":[{\"components\":[{\"internalType\":\"uint40\",\"name\":\"winnersCount\",\"type\":\"uint40\"},{\"internalType\":\"uint40\",\"name\":\"cumulativeWinnersCount\",\"type\":\"uint40\"},{\"internalType\":\"enum IRaffle.TokenType\",\"name\":\"prizeType\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"prizeTier\",\"type\":\"uint8\"},{\"internalType\":\"address\",\"name\":\"prizeAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"prizeId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"prizeAmount\",\"type\":\"uint256\"}],\"internalType\":\"struct IRaffle.Prize[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"raffleId\",\"type\":\"uint256\"}],\"name\":\"getWinners\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"participant\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"claimed\",\"type\":\"bool\"},{\"internalType\":\"uint8\",\"name\":\"prizeIndex\",\"type\":\"uint8\"},{\"internalType\":\"uint40\",\"name\":\"entryIndex\",\"type\":\"uint40\"}],\"internalType\":\"struct IRaffle.Winner[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"requestId\",\"type\":\"uint256\"}],\"name\":\"selectWinners\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint16\",\"name\":\"protocolFeeBp\",\"type\":\"uint16\"}],\"name\":\"setProtocolFeeBp\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"protocolFeeRecipient\",\"type\":\"address\"}],\"name\":\"setProtocolFeeRecipient\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"togglePaused\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"currencies\",\"type\":\"address[]\"},{\"internalType\":\"bool\",\"name\":\"isAllowed\",\"type\":\"bool\"}],\"name\":\"updateCurrenciesStatus\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"raffleId\",\"type\":\"uint256\"}],\"name\":\"withdrawPrizes\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"cancel(uint256)\":{\"params\":{\"raffleId\":\"The id of the raffle.\"}},\"cancelAfterRandomnessRequest(uint256)\":{\"params\":{\"raffleId\":\"The id of the raffle.\"}},\"claimFees(uint256)\":{\"params\":{\"raffleId\":\"The id of the raffle.\"}},\"claimPrizes((uint256,uint256[])[])\":{\"params\":{\"claimPrizesCalldata\":\"The calldata for claiming prizes.\"}},\"claimProtocolFees(address)\":{\"params\":{\"currency\":\"The currency of the fees to be claimed.\"}},\"claimRefund(uint256[])\":{\"params\":{\"raffleIds\":\"The ids of the raffles.\"}},\"createRaffle((uint40,bool,uint40,uint40,uint16,address,(uint40,uint40,uint8,uint8,address,uint256,uint256)[],(uint40,uint208)[5]))\":{\"params\":{\"params\":\"The parameters of the raffle.\"},\"returns\":{\"raffleId\":\"The id of the newly created raffle.\"}},\"depositPrizes(uint256)\":{\"params\":{\"raffleId\":\"The id of the raffle.\"}},\"enterRaffles((uint256,uint256)[])\":{\"params\":{\"entries\":\"The entries to be made.\"}},\"getEntries(uint256)\":{\"params\":{\"raffleId\":\"The id of the raffle.\"},\"returns\":{\"_0\":\"entries The entries entered for the raffle.\"}},\"getPricingOptions(uint256)\":{\"params\":{\"raffleId\":\"The id of the raffle.\"},\"returns\":{\"_0\":\"pricingOptions The pricing options for the raffle.\"}},\"getPrizes(uint256)\":{\"params\":{\"raffleId\":\"The id of the raffle.\"},\"returns\":{\"_0\":\"prizes The prizes to be distributed.\"}},\"getWinners(uint256)\":{\"params\":{\"raffleId\":\"The id of the raffle.\"},\"returns\":{\"_0\":\"winners The winners of the raffle.\"}},\"selectWinners(uint256)\":{\"params\":{\"requestId\":\"The request id returned by Chainlink.\"}},\"setProtocolFeeBp(uint16)\":{\"params\":{\"protocolFeeBp\":\"The protocol fee in basis points.\"}},\"setProtocolFeeRecipient(address)\":{\"params\":{\"protocolFeeRecipient\":\"The protocol fee recipient.\"}},\"updateCurrenciesStatus(address[],bool)\":{\"details\":\"Only callable by owner.\",\"params\":{\"currencies\":\"Currency addresses (address(0) for ETH)\",\"isAllowed\":\"Whether the currencies should be allowed for trading\"}},\"withdrawPrizes(uint256)\":{\"params\":{\"raffleId\":\"The id of the raffle.\"}}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"cancel(uint256)\":{\"notice\":\"Cancels a raffle beyond cut-off time without meeting minimum entries.\"},\"cancelAfterRandomnessRequest(uint256)\":{\"notice\":\"Cancels a raffle after randomness request if the randomness request         does not arrive after a certain amount of time.         Only callable by contract owner.\"},\"claimFees(uint256)\":{\"notice\":\"Claims the fees collected for a raffle.\"},\"claimPrizes((uint256,uint256[])[])\":{\"notice\":\"Claims the prizes for a winner. A winner can claim multiple prizes         from multiple raffles in a single transaction.\"},\"claimProtocolFees(address)\":{\"notice\":\"Claims the protocol fees collected for a raffle.\"},\"claimRefund(uint256[])\":{\"notice\":\"Claims the refund for a cancelled raffle.\"},\"createRaffle((uint40,bool,uint40,uint40,uint16,address,(uint40,uint40,uint8,uint8,address,uint256,uint256)[],(uint40,uint208)[5]))\":{\"notice\":\"Creates a new raffle.\"},\"depositPrizes(uint256)\":{\"notice\":\"Deposits prizes for a raffle.\"},\"enterRaffles((uint256,uint256)[])\":{\"notice\":\"Enters a raffle or multiple raffles.\"},\"getEntries(uint256)\":{\"notice\":\"Gets the entries for a raffle.\"},\"getPricingOptions(uint256)\":{\"notice\":\"Gets the pricing options for a raffle.\"},\"getPrizes(uint256)\":{\"notice\":\"Gets the prizes for a raffle.\"},\"getWinners(uint256)\":{\"notice\":\"Gets the winners for a raffle.\"},\"selectWinners(uint256)\":{\"notice\":\"Select the winners for a raffle based on the random words returned by Chainlink.\"},\"setProtocolFeeBp(uint16)\":{\"notice\":\"Sets the protocol fee in basis points. Only callable by contract owner.\"},\"setProtocolFeeRecipient(address)\":{\"notice\":\"Sets the protocol fee recipient. Only callable by contract owner.\"},\"togglePaused()\":{\"notice\":\"Toggle the contract's paused status. Only callable by contract owner.\"},\"updateCurrenciesStatus(address[],bool)\":{\"notice\":\"This function allows the owner to update currency statuses.\"},\"withdrawPrizes(uint256)\":{\"notice\":\"Withdraws the prizes for a raffle after it has been marked as refundable.\"}},\"version\":1}},\"settings\":{\"compilationTarget\":{\"tenderly/project/contracts/interfaces/IRaffle.sol\":\"IRaffle\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"tenderly/project/contracts/interfaces/IRaffle.sol\":{\"keccak256\":\"0x77140cbd7a3693109634e49ff0474384740906764f06575e9acd51c779a1f224\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://0242bb264c0ae24cc513e908abf3cc20f1a86288a0f07353798a3e89230184de\",\"dweb:/ipfs/QmTmLNoTQKo6GzTWhmu7unwT1wwFUmAWHKG9cgXgrLnteS\"]}},\"version\":1}",
+					"storageLayout": {
+						"storage": [],
+						"types": null
+					},
+					"userdoc": {
+						"kind": "user",
+						"methods": {
+							"cancel(uint256)": {
+								"notice": "Cancels a raffle beyond cut-off time without meeting minimum entries."
+							},
+							"cancelAfterRandomnessRequest(uint256)": {
+								"notice": "Cancels a raffle after randomness request if the randomness request         does not arrive after a certain amount of time.         Only callable by contract owner."
+							},
+							"claimFees(uint256)": {
+								"notice": "Claims the fees collected for a raffle."
+							},
+							"claimPrizes((uint256,uint256[])[])": {
+								"notice": "Claims the prizes for a winner. A winner can claim multiple prizes         from multiple raffles in a single transaction."
+							},
+							"claimProtocolFees(address)": {
+								"notice": "Claims the protocol fees collected for a raffle."
+							},
+							"claimRefund(uint256[])": {
+								"notice": "Claims the refund for a cancelled raffle."
+							},
+							"createRaffle((uint40,bool,uint40,uint40,uint16,address,(uint40,uint40,uint8,uint8,address,uint256,uint256)[],(uint40,uint208)[5]))": {
+								"notice": "Creates a new raffle."
+							},
+							"depositPrizes(uint256)": {
+								"notice": "Deposits prizes for a raffle."
+							},
+							"enterRaffles((uint256,uint256)[])": {
+								"notice": "Enters a raffle or multiple raffles."
+							},
+							"getEntries(uint256)": {
+								"notice": "Gets the entries for a raffle."
+							},
+							"getPricingOptions(uint256)": {
+								"notice": "Gets the pricing options for a raffle."
+							},
+							"getPrizes(uint256)": {
+								"notice": "Gets the prizes for a raffle."
+							},
+							"getWinners(uint256)": {
+								"notice": "Gets the winners for a raffle."
+							},
+							"selectWinners(uint256)": {
+								"notice": "Select the winners for a raffle based on the random words returned by Chainlink."
+							},
+							"setProtocolFeeBp(uint16)": {
+								"notice": "Sets the protocol fee in basis points. Only callable by contract owner."
+							},
+							"setProtocolFeeRecipient(address)": {
+								"notice": "Sets the protocol fee recipient. Only callable by contract owner."
+							},
+							"togglePaused()": {
+								"notice": "Toggle the contract's paused status. Only callable by contract owner."
+							},
+							"updateCurrenciesStatus(address[],bool)": {
+								"notice": "This function allows the owner to update currency statuses."
+							},
+							"withdrawPrizes(uint256)": {
+								"notice": "Withdraws the prizes for a raffle after it has been marked as refundable."
+							}
+						},
+						"version": 1
+					}
+				}
+			}
+		},
+		"sources": {
+			"tenderly/project/contracts/interfaces/IRaffle.sol": {
+				"ast": {
+					"absolutePath": "tenderly/project/contracts/interfaces/IRaffle.sol",
+					"exportedSymbols": {
+						"IRaffle": [
+							379
+						]
+					},
+					"id": 380,
+					"license": "MIT",
+					"nodeType": "SourceUnit",
+					"nodes": [
+						{
+							"id": 1,
+							"literals": [
+								"solidity",
+								"0.8",
+								".17"
+							],
+							"nodeType": "PragmaDirective",
+							"src": "32:23:0"
+						},
+						{
+							"abstract": false,
+							"baseContracts": [],
+							"canonicalName": "IRaffle",
+							"contractDependencies": [],
+							"contractKind": "interface",
+							"fullyImplemented": false,
+							"id": 379,
+							"linearizedBaseContracts": [
+								379
+							],
+							"name": "IRaffle",
+							"nameLocation": "67:7:0",
+							"nodeType": "ContractDefinition",
+							"nodes": [
+								{
+									"canonicalName": "IRaffle.RaffleStatus",
+									"id": 11,
+									"members": [
+										{
+											"id": 2,
+											"name": "None",
+											"nameLocation": "109:4:0",
+											"nodeType": "EnumValue",
+											"src": "109:4:0"
+										},
+										{
+											"id": 3,
+											"name": "Created",
+											"nameLocation": "123:7:0",
+											"nodeType": "EnumValue",
+											"src": "123:7:0"
+										},
+										{
+											"id": 4,
+											"name": "Open",
+											"nameLocation": "140:4:0",
+											"nodeType": "EnumValue",
+											"src": "140:4:0"
+										},
+										{
+											"id": 5,
+											"name": "Drawing",
+											"nameLocation": "154:7:0",
+											"nodeType": "EnumValue",
+											"src": "154:7:0"
+										},
+										{
+											"id": 6,
+											"name": "RandomnessFulfilled",
+											"nameLocation": "171:19:0",
+											"nodeType": "EnumValue",
+											"src": "171:19:0"
+										},
+										{
+											"id": 7,
+											"name": "Drawn",
+											"nameLocation": "200:5:0",
+											"nodeType": "EnumValue",
+											"src": "200:5:0"
+										},
+										{
+											"id": 8,
+											"name": "Complete",
+											"nameLocation": "215:8:0",
+											"nodeType": "EnumValue",
+											"src": "215:8:0"
+										},
+										{
+											"id": 9,
+											"name": "Refundable",
+											"nameLocation": "233:10:0",
+											"nodeType": "EnumValue",
+											"src": "233:10:0"
+										},
+										{
+											"id": 10,
+											"name": "Cancelled",
+											"nameLocation": "253:9:0",
+											"nodeType": "EnumValue",
+											"src": "253:9:0"
+										}
+									],
+									"name": "RaffleStatus",
+									"nameLocation": "86:12:0",
+									"nodeType": "EnumDefinition",
+									"src": "81:187:0"
+								},
+								{
+									"canonicalName": "IRaffle.TokenType",
+									"id": 16,
+									"members": [
+										{
+											"id": 12,
+											"name": "ERC721",
+											"nameLocation": "299:6:0",
+											"nodeType": "EnumValue",
+											"src": "299:6:0"
+										},
+										{
+											"id": 13,
+											"name": "ERC1155",
+											"nameLocation": "315:7:0",
+											"nodeType": "EnumValue",
+											"src": "315:7:0"
+										},
+										{
+											"id": 14,
+											"name": "ETH",
+											"nameLocation": "332:3:0",
+											"nodeType": "EnumValue",
+											"src": "332:3:0"
+										},
+										{
+											"id": 15,
+											"name": "ERC20",
+											"nameLocation": "345:5:0",
+											"nodeType": "EnumValue",
+											"src": "345:5:0"
+										}
+									],
+									"name": "TokenType",
+									"nameLocation": "279:9:0",
+									"nodeType": "EnumDefinition",
+									"src": "274:82:0"
+								},
+								{
+									"canonicalName": "IRaffle.PricingOption",
+									"id": 21,
+									"members": [
+										{
+											"constant": false,
+											"id": 18,
+											"mutability": "mutable",
+											"name": "entriesCount",
+											"nameLocation": "554:12:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 21,
+											"src": "547:19:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint40",
+												"typeString": "uint40"
+											},
+											"typeName": {
+												"id": 17,
+												"name": "uint40",
+												"nodeType": "ElementaryTypeName",
+												"src": "547:6:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint40",
+													"typeString": "uint40"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 20,
+											"mutability": "mutable",
+											"name": "price",
+											"nameLocation": "584:5:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 21,
+											"src": "576:13:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint208",
+												"typeString": "uint208"
+											},
+											"typeName": {
+												"id": 19,
+												"name": "uint208",
+												"nodeType": "ElementaryTypeName",
+												"src": "576:7:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint208",
+													"typeString": "uint208"
+												}
+											},
+											"visibility": "internal"
+										}
+									],
+									"name": "PricingOption",
+									"nameLocation": "523:13:0",
+									"nodeType": "StructDefinition",
+									"scope": 379,
+									"src": "516:80:0",
+									"visibility": "public"
+								},
+								{
+									"canonicalName": "IRaffle.Entry",
+									"id": 26,
+									"members": [
+										{
+											"constant": false,
+											"id": 23,
+											"mutability": "mutable",
+											"name": "currentEntryIndex",
+											"nameLocation": "786:17:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 26,
+											"src": "779:24:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint40",
+												"typeString": "uint40"
+											},
+											"typeName": {
+												"id": 22,
+												"name": "uint40",
+												"nodeType": "ElementaryTypeName",
+												"src": "779:6:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint40",
+													"typeString": "uint40"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 25,
+											"mutability": "mutable",
+											"name": "participant",
+											"nameLocation": "821:11:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 26,
+											"src": "813:19:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_address",
+												"typeString": "address"
+											},
+											"typeName": {
+												"id": 24,
+												"name": "address",
+												"nodeType": "ElementaryTypeName",
+												"src": "813:7:0",
+												"stateMutability": "nonpayable",
+												"typeDescriptions": {
+													"typeIdentifier": "t_address",
+													"typeString": "address"
+												}
+											},
+											"visibility": "internal"
+										}
+									],
+									"name": "Entry",
+									"nameLocation": "763:5:0",
+									"nodeType": "StructDefinition",
+									"scope": 379,
+									"src": "756:83:0",
+									"visibility": "public"
+								},
+								{
+									"canonicalName": "IRaffle.Winner",
+									"id": 35,
+									"members": [
+										{
+											"constant": false,
+											"id": 28,
+											"mutability": "mutable",
+											"name": "participant",
+											"nameLocation": "1130:11:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 35,
+											"src": "1122:19:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_address",
+												"typeString": "address"
+											},
+											"typeName": {
+												"id": 27,
+												"name": "address",
+												"nodeType": "ElementaryTypeName",
+												"src": "1122:7:0",
+												"stateMutability": "nonpayable",
+												"typeDescriptions": {
+													"typeIdentifier": "t_address",
+													"typeString": "address"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 30,
+											"mutability": "mutable",
+											"name": "claimed",
+											"nameLocation": "1156:7:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 35,
+											"src": "1151:12:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_bool",
+												"typeString": "bool"
+											},
+											"typeName": {
+												"id": 29,
+												"name": "bool",
+												"nodeType": "ElementaryTypeName",
+												"src": "1151:4:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_bool",
+													"typeString": "bool"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 32,
+											"mutability": "mutable",
+											"name": "prizeIndex",
+											"nameLocation": "1179:10:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 35,
+											"src": "1173:16:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint8",
+												"typeString": "uint8"
+											},
+											"typeName": {
+												"id": 31,
+												"name": "uint8",
+												"nodeType": "ElementaryTypeName",
+												"src": "1173:5:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint8",
+													"typeString": "uint8"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 34,
+											"mutability": "mutable",
+											"name": "entryIndex",
+											"nameLocation": "1206:10:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 35,
+											"src": "1199:17:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint40",
+												"typeString": "uint40"
+											},
+											"typeName": {
+												"id": 33,
+												"name": "uint40",
+												"nodeType": "ElementaryTypeName",
+												"src": "1199:6:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint40",
+													"typeString": "uint40"
+												}
+											},
+											"visibility": "internal"
+										}
+									],
+									"name": "Winner",
+									"nameLocation": "1105:6:0",
+									"nodeType": "StructDefinition",
+									"scope": 379,
+									"src": "1098:125:0",
+									"visibility": "public"
+								},
+								{
+									"canonicalName": "IRaffle.Prize",
+									"id": 51,
+									"members": [
+										{
+											"constant": false,
+											"id": 37,
+											"mutability": "mutable",
+											"name": "winnersCount",
+											"nameLocation": "1651:12:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 51,
+											"src": "1644:19:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint40",
+												"typeString": "uint40"
+											},
+											"typeName": {
+												"id": 36,
+												"name": "uint40",
+												"nodeType": "ElementaryTypeName",
+												"src": "1644:6:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint40",
+													"typeString": "uint40"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 39,
+											"mutability": "mutable",
+											"name": "cumulativeWinnersCount",
+											"nameLocation": "1680:22:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 51,
+											"src": "1673:29:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint40",
+												"typeString": "uint40"
+											},
+											"typeName": {
+												"id": 38,
+												"name": "uint40",
+												"nodeType": "ElementaryTypeName",
+												"src": "1673:6:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint40",
+													"typeString": "uint40"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 42,
+											"mutability": "mutable",
+											"name": "prizeType",
+											"nameLocation": "1722:9:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 51,
+											"src": "1712:19:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_enum$_TokenType_$16",
+												"typeString": "enum IRaffle.TokenType"
+											},
+											"typeName": {
+												"id": 41,
+												"nodeType": "UserDefinedTypeName",
+												"pathNode": {
+													"id": 40,
+													"name": "TokenType",
+													"nameLocations": [
+														"1712:9:0"
+													],
+													"nodeType": "IdentifierPath",
+													"referencedDeclaration": 16,
+													"src": "1712:9:0"
+												},
+												"referencedDeclaration": 16,
+												"src": "1712:9:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_enum$_TokenType_$16",
+													"typeString": "enum IRaffle.TokenType"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 44,
+											"mutability": "mutable",
+											"name": "prizeTier",
+											"nameLocation": "1747:9:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 51,
+											"src": "1741:15:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint8",
+												"typeString": "uint8"
+											},
+											"typeName": {
+												"id": 43,
+												"name": "uint8",
+												"nodeType": "ElementaryTypeName",
+												"src": "1741:5:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint8",
+													"typeString": "uint8"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 46,
+											"mutability": "mutable",
+											"name": "prizeAddress",
+											"nameLocation": "1774:12:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 51,
+											"src": "1766:20:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_address",
+												"typeString": "address"
+											},
+											"typeName": {
+												"id": 45,
+												"name": "address",
+												"nodeType": "ElementaryTypeName",
+												"src": "1766:7:0",
+												"stateMutability": "nonpayable",
+												"typeDescriptions": {
+													"typeIdentifier": "t_address",
+													"typeString": "address"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 48,
+											"mutability": "mutable",
+											"name": "prizeId",
+											"nameLocation": "1804:7:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 51,
+											"src": "1796:15:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint256",
+												"typeString": "uint256"
+											},
+											"typeName": {
+												"id": 47,
+												"name": "uint256",
+												"nodeType": "ElementaryTypeName",
+												"src": "1796:7:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 50,
+											"mutability": "mutable",
+											"name": "prizeAmount",
+											"nameLocation": "1829:11:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 51,
+											"src": "1821:19:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint256",
+												"typeString": "uint256"
+											},
+											"typeName": {
+												"id": 49,
+												"name": "uint256",
+												"nodeType": "ElementaryTypeName",
+												"src": "1821:7:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												}
+											},
+											"visibility": "internal"
+										}
+									],
+									"name": "Prize",
+									"nameLocation": "1628:5:0",
+									"nodeType": "StructDefinition",
+									"scope": 379,
+									"src": "1621:226:0",
+									"visibility": "public"
+								},
+								{
+									"canonicalName": "IRaffle.Raffle",
+									"id": 90,
+									"members": [
+										{
+											"constant": false,
+											"id": 53,
+											"mutability": "mutable",
+											"name": "owner",
+											"nameLocation": "3050:5:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 90,
+											"src": "3042:13:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_address",
+												"typeString": "address"
+											},
+											"typeName": {
+												"id": 52,
+												"name": "address",
+												"nodeType": "ElementaryTypeName",
+												"src": "3042:7:0",
+												"stateMutability": "nonpayable",
+												"typeDescriptions": {
+													"typeIdentifier": "t_address",
+													"typeString": "address"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 56,
+											"mutability": "mutable",
+											"name": "status",
+											"nameLocation": "3078:6:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 90,
+											"src": "3065:19:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_enum$_RaffleStatus_$11",
+												"typeString": "enum IRaffle.RaffleStatus"
+											},
+											"typeName": {
+												"id": 55,
+												"nodeType": "UserDefinedTypeName",
+												"pathNode": {
+													"id": 54,
+													"name": "RaffleStatus",
+													"nameLocations": [
+														"3065:12:0"
+													],
+													"nodeType": "IdentifierPath",
+													"referencedDeclaration": 11,
+													"src": "3065:12:0"
+												},
+												"referencedDeclaration": 11,
+												"src": "3065:12:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_enum$_RaffleStatus_$11",
+													"typeString": "enum IRaffle.RaffleStatus"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 58,
+											"mutability": "mutable",
+											"name": "isMinimumEntriesFixed",
+											"nameLocation": "3099:21:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 90,
+											"src": "3094:26:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_bool",
+												"typeString": "bool"
+											},
+											"typeName": {
+												"id": 57,
+												"name": "bool",
+												"nodeType": "ElementaryTypeName",
+												"src": "3094:4:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_bool",
+													"typeString": "bool"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 60,
+											"mutability": "mutable",
+											"name": "cutoffTime",
+											"nameLocation": "3137:10:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 90,
+											"src": "3130:17:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint40",
+												"typeString": "uint40"
+											},
+											"typeName": {
+												"id": 59,
+												"name": "uint40",
+												"nodeType": "ElementaryTypeName",
+												"src": "3130:6:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint40",
+													"typeString": "uint40"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 62,
+											"mutability": "mutable",
+											"name": "drawnAt",
+											"nameLocation": "3164:7:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 90,
+											"src": "3157:14:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint40",
+												"typeString": "uint40"
+											},
+											"typeName": {
+												"id": 61,
+												"name": "uint40",
+												"nodeType": "ElementaryTypeName",
+												"src": "3157:6:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint40",
+													"typeString": "uint40"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 64,
+											"mutability": "mutable",
+											"name": "minimumEntries",
+											"nameLocation": "3188:14:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 90,
+											"src": "3181:21:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint40",
+												"typeString": "uint40"
+											},
+											"typeName": {
+												"id": 63,
+												"name": "uint40",
+												"nodeType": "ElementaryTypeName",
+												"src": "3181:6:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint40",
+													"typeString": "uint40"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 66,
+											"mutability": "mutable",
+											"name": "maximumEntriesPerParticipant",
+											"nameLocation": "3219:28:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 90,
+											"src": "3212:35:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint40",
+												"typeString": "uint40"
+											},
+											"typeName": {
+												"id": 65,
+												"name": "uint40",
+												"nodeType": "ElementaryTypeName",
+												"src": "3212:6:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint40",
+													"typeString": "uint40"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 68,
+											"mutability": "mutable",
+											"name": "feeTokenAddress",
+											"nameLocation": "3265:15:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 90,
+											"src": "3257:23:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_address",
+												"typeString": "address"
+											},
+											"typeName": {
+												"id": 67,
+												"name": "address",
+												"nodeType": "ElementaryTypeName",
+												"src": "3257:7:0",
+												"stateMutability": "nonpayable",
+												"typeDescriptions": {
+													"typeIdentifier": "t_address",
+													"typeString": "address"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 70,
+											"mutability": "mutable",
+											"name": "protocolFeeBp",
+											"nameLocation": "3297:13:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 90,
+											"src": "3290:20:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint16",
+												"typeString": "uint16"
+											},
+											"typeName": {
+												"id": 69,
+												"name": "uint16",
+												"nodeType": "ElementaryTypeName",
+												"src": "3290:6:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint16",
+													"typeString": "uint16"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 72,
+											"mutability": "mutable",
+											"name": "claimableFees",
+											"nameLocation": "3328:13:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 90,
+											"src": "3320:21:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint208",
+												"typeString": "uint208"
+											},
+											"typeName": {
+												"id": 71,
+												"name": "uint208",
+												"nodeType": "ElementaryTypeName",
+												"src": "3320:7:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint208",
+													"typeString": "uint208"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 77,
+											"mutability": "mutable",
+											"name": "pricingOptions",
+											"nameLocation": "3368:14:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 90,
+											"src": "3351:31:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_array$_t_struct$_PricingOption_$21_storage_$5_storage_ptr",
+												"typeString": "struct IRaffle.PricingOption[5]"
+											},
+											"typeName": {
+												"baseType": {
+													"id": 74,
+													"nodeType": "UserDefinedTypeName",
+													"pathNode": {
+														"id": 73,
+														"name": "PricingOption",
+														"nameLocations": [
+															"3351:13:0"
+														],
+														"nodeType": "IdentifierPath",
+														"referencedDeclaration": 21,
+														"src": "3351:13:0"
+													},
+													"referencedDeclaration": 21,
+													"src": "3351:13:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_struct$_PricingOption_$21_storage_ptr",
+														"typeString": "struct IRaffle.PricingOption"
+													}
+												},
+												"id": 76,
+												"length": {
+													"hexValue": "35",
+													"id": 75,
+													"isConstant": false,
+													"isLValue": false,
+													"isPure": true,
+													"kind": "number",
+													"lValueRequested": false,
+													"nodeType": "Literal",
+													"src": "3365:1:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_rational_5_by_1",
+														"typeString": "int_const 5"
+													},
+													"value": "5"
+												},
+												"nodeType": "ArrayTypeName",
+												"src": "3351:16:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_array$_t_struct$_PricingOption_$21_storage_$5_storage_ptr",
+													"typeString": "struct IRaffle.PricingOption[5]"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 81,
+											"mutability": "mutable",
+											"name": "prizes",
+											"nameLocation": "3400:6:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 90,
+											"src": "3392:14:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_array$_t_struct$_Prize_$51_storage_$dyn_storage_ptr",
+												"typeString": "struct IRaffle.Prize[]"
+											},
+											"typeName": {
+												"baseType": {
+													"id": 79,
+													"nodeType": "UserDefinedTypeName",
+													"pathNode": {
+														"id": 78,
+														"name": "Prize",
+														"nameLocations": [
+															"3392:5:0"
+														],
+														"nodeType": "IdentifierPath",
+														"referencedDeclaration": 51,
+														"src": "3392:5:0"
+													},
+													"referencedDeclaration": 51,
+													"src": "3392:5:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_struct$_Prize_$51_storage_ptr",
+														"typeString": "struct IRaffle.Prize"
+													}
+												},
+												"id": 80,
+												"nodeType": "ArrayTypeName",
+												"src": "3392:7:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_array$_t_struct$_Prize_$51_storage_$dyn_storage_ptr",
+													"typeString": "struct IRaffle.Prize[]"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 85,
+											"mutability": "mutable",
+											"name": "entries",
+											"nameLocation": "3424:7:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 90,
+											"src": "3416:15:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_array$_t_struct$_Entry_$26_storage_$dyn_storage_ptr",
+												"typeString": "struct IRaffle.Entry[]"
+											},
+											"typeName": {
+												"baseType": {
+													"id": 83,
+													"nodeType": "UserDefinedTypeName",
+													"pathNode": {
+														"id": 82,
+														"name": "Entry",
+														"nameLocations": [
+															"3416:5:0"
+														],
+														"nodeType": "IdentifierPath",
+														"referencedDeclaration": 26,
+														"src": "3416:5:0"
+													},
+													"referencedDeclaration": 26,
+													"src": "3416:5:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_struct$_Entry_$26_storage_ptr",
+														"typeString": "struct IRaffle.Entry"
+													}
+												},
+												"id": 84,
+												"nodeType": "ArrayTypeName",
+												"src": "3416:7:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_array$_t_struct$_Entry_$26_storage_$dyn_storage_ptr",
+													"typeString": "struct IRaffle.Entry[]"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 89,
+											"mutability": "mutable",
+											"name": "winners",
+											"nameLocation": "3450:7:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 90,
+											"src": "3441:16:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_array$_t_struct$_Winner_$35_storage_$dyn_storage_ptr",
+												"typeString": "struct IRaffle.Winner[]"
+											},
+											"typeName": {
+												"baseType": {
+													"id": 87,
+													"nodeType": "UserDefinedTypeName",
+													"pathNode": {
+														"id": 86,
+														"name": "Winner",
+														"nameLocations": [
+															"3441:6:0"
+														],
+														"nodeType": "IdentifierPath",
+														"referencedDeclaration": 35,
+														"src": "3441:6:0"
+													},
+													"referencedDeclaration": 35,
+													"src": "3441:6:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_struct$_Winner_$35_storage_ptr",
+														"typeString": "struct IRaffle.Winner"
+													}
+												},
+												"id": 88,
+												"nodeType": "ArrayTypeName",
+												"src": "3441:8:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_array$_t_struct$_Winner_$35_storage_$dyn_storage_ptr",
+													"typeString": "struct IRaffle.Winner[]"
+												}
+											},
+											"visibility": "internal"
+										}
+									],
+									"name": "Raffle",
+									"nameLocation": "3025:6:0",
+									"nodeType": "StructDefinition",
+									"scope": 379,
+									"src": "3018:446:0",
+									"visibility": "public"
+								},
+								{
+									"canonicalName": "IRaffle.ParticipantStats",
+									"id": 97,
+									"members": [
+										{
+											"constant": false,
+											"id": 92,
+											"mutability": "mutable",
+											"name": "amountPaid",
+											"nameLocation": "3734:10:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 97,
+											"src": "3726:18:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint208",
+												"typeString": "uint208"
+											},
+											"typeName": {
+												"id": 91,
+												"name": "uint208",
+												"nodeType": "ElementaryTypeName",
+												"src": "3726:7:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint208",
+													"typeString": "uint208"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 94,
+											"mutability": "mutable",
+											"name": "entriesCount",
+											"nameLocation": "3761:12:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 97,
+											"src": "3754:19:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint40",
+												"typeString": "uint40"
+											},
+											"typeName": {
+												"id": 93,
+												"name": "uint40",
+												"nodeType": "ElementaryTypeName",
+												"src": "3754:6:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint40",
+													"typeString": "uint40"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 96,
+											"mutability": "mutable",
+											"name": "refunded",
+											"nameLocation": "3788:8:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 97,
+											"src": "3783:13:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_bool",
+												"typeString": "bool"
+											},
+											"typeName": {
+												"id": 95,
+												"name": "bool",
+												"nodeType": "ElementaryTypeName",
+												"src": "3783:4:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_bool",
+													"typeString": "bool"
+												}
+											},
+											"visibility": "internal"
+										}
+									],
+									"name": "ParticipantStats",
+									"nameLocation": "3699:16:0",
+									"nodeType": "StructDefinition",
+									"scope": 379,
+									"src": "3692:111:0",
+									"visibility": "public"
+								},
+								{
+									"canonicalName": "IRaffle.EntryCalldata",
+									"id": 102,
+									"members": [
+										{
+											"constant": false,
+											"id": 99,
+											"mutability": "mutable",
+											"name": "raffleId",
+											"nameLocation": "3984:8:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 102,
+											"src": "3976:16:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint256",
+												"typeString": "uint256"
+											},
+											"typeName": {
+												"id": 98,
+												"name": "uint256",
+												"nodeType": "ElementaryTypeName",
+												"src": "3976:7:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 101,
+											"mutability": "mutable",
+											"name": "pricingOptionIndex",
+											"nameLocation": "4010:18:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 102,
+											"src": "4002:26:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint256",
+												"typeString": "uint256"
+											},
+											"typeName": {
+												"id": 100,
+												"name": "uint256",
+												"nodeType": "ElementaryTypeName",
+												"src": "4002:7:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												}
+											},
+											"visibility": "internal"
+										}
+									],
+									"name": "EntryCalldata",
+									"nameLocation": "3952:13:0",
+									"nodeType": "StructDefinition",
+									"scope": 379,
+									"src": "3945:90:0",
+									"visibility": "public"
+								},
+								{
+									"canonicalName": "IRaffle.CreateRaffleCalldata",
+									"id": 124,
+									"members": [
+										{
+											"constant": false,
+											"id": 104,
+											"mutability": "mutable",
+											"name": "cutoffTime",
+											"nameLocation": "4835:10:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 124,
+											"src": "4828:17:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint40",
+												"typeString": "uint40"
+											},
+											"typeName": {
+												"id": 103,
+												"name": "uint40",
+												"nodeType": "ElementaryTypeName",
+												"src": "4828:6:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint40",
+													"typeString": "uint40"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 106,
+											"mutability": "mutable",
+											"name": "isMinimumEntriesFixed",
+											"nameLocation": "4860:21:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 124,
+											"src": "4855:26:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_bool",
+												"typeString": "bool"
+											},
+											"typeName": {
+												"id": 105,
+												"name": "bool",
+												"nodeType": "ElementaryTypeName",
+												"src": "4855:4:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_bool",
+													"typeString": "bool"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 108,
+											"mutability": "mutable",
+											"name": "minimumEntries",
+											"nameLocation": "4898:14:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 124,
+											"src": "4891:21:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint40",
+												"typeString": "uint40"
+											},
+											"typeName": {
+												"id": 107,
+												"name": "uint40",
+												"nodeType": "ElementaryTypeName",
+												"src": "4891:6:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint40",
+													"typeString": "uint40"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 110,
+											"mutability": "mutable",
+											"name": "maximumEntriesPerParticipant",
+											"nameLocation": "4929:28:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 124,
+											"src": "4922:35:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint40",
+												"typeString": "uint40"
+											},
+											"typeName": {
+												"id": 109,
+												"name": "uint40",
+												"nodeType": "ElementaryTypeName",
+												"src": "4922:6:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint40",
+													"typeString": "uint40"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 112,
+											"mutability": "mutable",
+											"name": "protocolFeeBp",
+											"nameLocation": "4974:13:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 124,
+											"src": "4967:20:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint16",
+												"typeString": "uint16"
+											},
+											"typeName": {
+												"id": 111,
+												"name": "uint16",
+												"nodeType": "ElementaryTypeName",
+												"src": "4967:6:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint16",
+													"typeString": "uint16"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 114,
+											"mutability": "mutable",
+											"name": "feeTokenAddress",
+											"nameLocation": "5005:15:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 124,
+											"src": "4997:23:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_address",
+												"typeString": "address"
+											},
+											"typeName": {
+												"id": 113,
+												"name": "address",
+												"nodeType": "ElementaryTypeName",
+												"src": "4997:7:0",
+												"stateMutability": "nonpayable",
+												"typeDescriptions": {
+													"typeIdentifier": "t_address",
+													"typeString": "address"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 118,
+											"mutability": "mutable",
+											"name": "prizes",
+											"nameLocation": "5038:6:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 124,
+											"src": "5030:14:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_array$_t_struct$_Prize_$51_storage_$dyn_storage_ptr",
+												"typeString": "struct IRaffle.Prize[]"
+											},
+											"typeName": {
+												"baseType": {
+													"id": 116,
+													"nodeType": "UserDefinedTypeName",
+													"pathNode": {
+														"id": 115,
+														"name": "Prize",
+														"nameLocations": [
+															"5030:5:0"
+														],
+														"nodeType": "IdentifierPath",
+														"referencedDeclaration": 51,
+														"src": "5030:5:0"
+													},
+													"referencedDeclaration": 51,
+													"src": "5030:5:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_struct$_Prize_$51_storage_ptr",
+														"typeString": "struct IRaffle.Prize"
+													}
+												},
+												"id": 117,
+												"nodeType": "ArrayTypeName",
+												"src": "5030:7:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_array$_t_struct$_Prize_$51_storage_$dyn_storage_ptr",
+													"typeString": "struct IRaffle.Prize[]"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 123,
+											"mutability": "mutable",
+											"name": "pricingOptions",
+											"nameLocation": "5071:14:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 124,
+											"src": "5054:31:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_array$_t_struct$_PricingOption_$21_storage_$5_storage_ptr",
+												"typeString": "struct IRaffle.PricingOption[5]"
+											},
+											"typeName": {
+												"baseType": {
+													"id": 120,
+													"nodeType": "UserDefinedTypeName",
+													"pathNode": {
+														"id": 119,
+														"name": "PricingOption",
+														"nameLocations": [
+															"5054:13:0"
+														],
+														"nodeType": "IdentifierPath",
+														"referencedDeclaration": 21,
+														"src": "5054:13:0"
+													},
+													"referencedDeclaration": 21,
+													"src": "5054:13:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_struct$_PricingOption_$21_storage_ptr",
+														"typeString": "struct IRaffle.PricingOption"
+													}
+												},
+												"id": 122,
+												"length": {
+													"hexValue": "35",
+													"id": 121,
+													"isConstant": false,
+													"isLValue": false,
+													"isPure": true,
+													"kind": "number",
+													"lValueRequested": false,
+													"nodeType": "Literal",
+													"src": "5068:1:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_rational_5_by_1",
+														"typeString": "int_const 5"
+													},
+													"value": "5"
+												},
+												"nodeType": "ArrayTypeName",
+												"src": "5054:16:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_array$_t_struct$_PricingOption_$21_storage_$5_storage_ptr",
+													"typeString": "struct IRaffle.PricingOption[5]"
+												}
+											},
+											"visibility": "internal"
+										}
+									],
+									"name": "CreateRaffleCalldata",
+									"nameLocation": "4797:20:0",
+									"nodeType": "StructDefinition",
+									"scope": 379,
+									"src": "4790:302:0",
+									"visibility": "public"
+								},
+								{
+									"canonicalName": "IRaffle.ClaimPrizesCalldata",
+									"id": 130,
+									"members": [
+										{
+											"constant": false,
+											"id": 126,
+											"mutability": "mutable",
+											"name": "raffleId",
+											"nameLocation": "5143:8:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 130,
+											"src": "5135:16:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint256",
+												"typeString": "uint256"
+											},
+											"typeName": {
+												"id": 125,
+												"name": "uint256",
+												"nodeType": "ElementaryTypeName",
+												"src": "5135:7:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 129,
+											"mutability": "mutable",
+											"name": "winnerIndices",
+											"nameLocation": "5171:13:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 130,
+											"src": "5161:23:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_array$_t_uint256_$dyn_storage_ptr",
+												"typeString": "uint256[]"
+											},
+											"typeName": {
+												"baseType": {
+													"id": 127,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "5161:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"id": 128,
+												"nodeType": "ArrayTypeName",
+												"src": "5161:9:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_array$_t_uint256_$dyn_storage_ptr",
+													"typeString": "uint256[]"
+												}
+											},
+											"visibility": "internal"
+										}
+									],
+									"name": "ClaimPrizesCalldata",
+									"nameLocation": "5105:19:0",
+									"nodeType": "StructDefinition",
+									"scope": 379,
+									"src": "5098:93:0",
+									"visibility": "public"
+								},
+								{
+									"canonicalName": "IRaffle.RandomnessRequest",
+									"id": 137,
+									"members": [
+										{
+											"constant": false,
+											"id": 132,
+											"mutability": "mutable",
+											"name": "exists",
+											"nameLocation": "5496:6:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 137,
+											"src": "5491:11:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_bool",
+												"typeString": "bool"
+											},
+											"typeName": {
+												"id": 131,
+												"name": "bool",
+												"nodeType": "ElementaryTypeName",
+												"src": "5491:4:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_bool",
+													"typeString": "bool"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 134,
+											"mutability": "mutable",
+											"name": "randomWord",
+											"nameLocation": "5520:10:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 137,
+											"src": "5512:18:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint248",
+												"typeString": "uint248"
+											},
+											"typeName": {
+												"id": 133,
+												"name": "uint248",
+												"nodeType": "ElementaryTypeName",
+												"src": "5512:7:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint248",
+													"typeString": "uint248"
+												}
+											},
+											"visibility": "internal"
+										},
+										{
+											"constant": false,
+											"id": 136,
+											"mutability": "mutable",
+											"name": "raffleId",
+											"nameLocation": "5548:8:0",
+											"nodeType": "VariableDeclaration",
+											"scope": 137,
+											"src": "5540:16:0",
+											"stateVariable": false,
+											"storageLocation": "default",
+											"typeDescriptions": {
+												"typeIdentifier": "t_uint256",
+												"typeString": "uint256"
+											},
+											"typeName": {
+												"id": 135,
+												"name": "uint256",
+												"nodeType": "ElementaryTypeName",
+												"src": "5540:7:0",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												}
+											},
+											"visibility": "internal"
+										}
+									],
+									"name": "RandomnessRequest",
+									"nameLocation": "5463:17:0",
+									"nodeType": "StructDefinition",
+									"scope": 379,
+									"src": "5456:107:0",
+									"visibility": "public"
+								},
+								{
+									"anonymous": false,
+									"eventSelector": "cb2fef16ee9f3ea43e174daf88ffcdc8beee4ad884c7570093d998d710586987",
+									"id": 144,
+									"name": "CurrenciesStatusUpdated",
+									"nameLocation": "5575:23:0",
+									"nodeType": "EventDefinition",
+									"parameters": {
+										"id": 143,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 140,
+												"indexed": false,
+												"mutability": "mutable",
+												"name": "currencies",
+												"nameLocation": "5609:10:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 144,
+												"src": "5599:20:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_array$_t_address_$dyn_memory_ptr",
+													"typeString": "address[]"
+												},
+												"typeName": {
+													"baseType": {
+														"id": 138,
+														"name": "address",
+														"nodeType": "ElementaryTypeName",
+														"src": "5599:7:0",
+														"stateMutability": "nonpayable",
+														"typeDescriptions": {
+															"typeIdentifier": "t_address",
+															"typeString": "address"
+														}
+													},
+													"id": 139,
+													"nodeType": "ArrayTypeName",
+													"src": "5599:9:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_array$_t_address_$dyn_storage_ptr",
+														"typeString": "address[]"
+													}
+												},
+												"visibility": "internal"
+											},
+											{
+												"constant": false,
+												"id": 142,
+												"indexed": false,
+												"mutability": "mutable",
+												"name": "isAllowed",
+												"nameLocation": "5626:9:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 144,
+												"src": "5621:14:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_bool",
+													"typeString": "bool"
+												},
+												"typeName": {
+													"id": 141,
+													"name": "bool",
+													"nodeType": "ElementaryTypeName",
+													"src": "5621:4:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_bool",
+														"typeString": "bool"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "5598:38:0"
+									},
+									"src": "5569:68:0"
+								},
+								{
+									"anonymous": false,
+									"eventSelector": "c0b7cf12926534c2d86d0abb17d620a3a06e07a84b3b8156a4b21189222b16d2",
+									"id": 152,
+									"name": "EntryRefunded",
+									"nameLocation": "5648:13:0",
+									"nodeType": "EventDefinition",
+									"parameters": {
+										"id": 151,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 146,
+												"indexed": false,
+												"mutability": "mutable",
+												"name": "raffleId",
+												"nameLocation": "5670:8:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 152,
+												"src": "5662:16:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 145,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "5662:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											},
+											{
+												"constant": false,
+												"id": 148,
+												"indexed": false,
+												"mutability": "mutable",
+												"name": "buyer",
+												"nameLocation": "5688:5:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 152,
+												"src": "5680:13:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_address",
+													"typeString": "address"
+												},
+												"typeName": {
+													"id": 147,
+													"name": "address",
+													"nodeType": "ElementaryTypeName",
+													"src": "5680:7:0",
+													"stateMutability": "nonpayable",
+													"typeDescriptions": {
+														"typeIdentifier": "t_address",
+														"typeString": "address"
+													}
+												},
+												"visibility": "internal"
+											},
+											{
+												"constant": false,
+												"id": 150,
+												"indexed": false,
+												"mutability": "mutable",
+												"name": "amount",
+												"nameLocation": "5703:6:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 152,
+												"src": "5695:14:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint208",
+													"typeString": "uint208"
+												},
+												"typeName": {
+													"id": 149,
+													"name": "uint208",
+													"nodeType": "ElementaryTypeName",
+													"src": "5695:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint208",
+														"typeString": "uint208"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "5661:49:0"
+									},
+									"src": "5642:69:0"
+								},
+								{
+									"anonymous": false,
+									"eventSelector": "c25cd4cec0cbfb9bc40ad8f59ac733efcddf6ed3b7519369c9b9ceb2ee784601",
+									"id": 162,
+									"name": "EntrySold",
+									"nameLocation": "5722:9:0",
+									"nodeType": "EventDefinition",
+									"parameters": {
+										"id": 161,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 154,
+												"indexed": false,
+												"mutability": "mutable",
+												"name": "raffleId",
+												"nameLocation": "5740:8:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 162,
+												"src": "5732:16:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 153,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "5732:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											},
+											{
+												"constant": false,
+												"id": 156,
+												"indexed": false,
+												"mutability": "mutable",
+												"name": "buyer",
+												"nameLocation": "5758:5:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 162,
+												"src": "5750:13:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_address",
+													"typeString": "address"
+												},
+												"typeName": {
+													"id": 155,
+													"name": "address",
+													"nodeType": "ElementaryTypeName",
+													"src": "5750:7:0",
+													"stateMutability": "nonpayable",
+													"typeDescriptions": {
+														"typeIdentifier": "t_address",
+														"typeString": "address"
+													}
+												},
+												"visibility": "internal"
+											},
+											{
+												"constant": false,
+												"id": 158,
+												"indexed": false,
+												"mutability": "mutable",
+												"name": "entriesCount",
+												"nameLocation": "5772:12:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 162,
+												"src": "5765:19:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint40",
+													"typeString": "uint40"
+												},
+												"typeName": {
+													"id": 157,
+													"name": "uint40",
+													"nodeType": "ElementaryTypeName",
+													"src": "5765:6:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint40",
+														"typeString": "uint40"
+													}
+												},
+												"visibility": "internal"
+											},
+											{
+												"constant": false,
+												"id": 160,
+												"indexed": false,
+												"mutability": "mutable",
+												"name": "price",
+												"nameLocation": "5794:5:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 162,
+												"src": "5786:13:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint208",
+													"typeString": "uint208"
+												},
+												"typeName": {
+													"id": 159,
+													"name": "uint208",
+													"nodeType": "ElementaryTypeName",
+													"src": "5786:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint208",
+														"typeString": "uint208"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "5731:69:0"
+									},
+									"src": "5716:85:0"
+								},
+								{
+									"anonymous": false,
+									"eventSelector": "a1f87f32d0f17fab0242ca800d736293de8988c14b27747e218cf13d5c249f53",
+									"id": 168,
+									"name": "FeesClaimed",
+									"nameLocation": "5812:11:0",
+									"nodeType": "EventDefinition",
+									"parameters": {
+										"id": 167,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 164,
+												"indexed": false,
+												"mutability": "mutable",
+												"name": "raffleId",
+												"nameLocation": "5832:8:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 168,
+												"src": "5824:16:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 163,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "5824:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											},
+											{
+												"constant": false,
+												"id": 166,
+												"indexed": false,
+												"mutability": "mutable",
+												"name": "amount",
+												"nameLocation": "5850:6:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 168,
+												"src": "5842:14:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 165,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "5842:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "5823:34:0"
+									},
+									"src": "5806:52:0"
+								},
+								{
+									"anonymous": false,
+									"eventSelector": "0d0ab4a45afc0276ae825be9eeb4552011b19aad5c92b4bb782f3ca0356fedc5",
+									"id": 175,
+									"name": "PrizesClaimed",
+									"nameLocation": "5869:13:0",
+									"nodeType": "EventDefinition",
+									"parameters": {
+										"id": 174,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 170,
+												"indexed": false,
+												"mutability": "mutable",
+												"name": "raffleId",
+												"nameLocation": "5891:8:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 175,
+												"src": "5883:16:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 169,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "5883:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											},
+											{
+												"constant": false,
+												"id": 173,
+												"indexed": false,
+												"mutability": "mutable",
+												"name": "winnerIndex",
+												"nameLocation": "5911:11:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 175,
+												"src": "5901:21:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_array$_t_uint256_$dyn_memory_ptr",
+													"typeString": "uint256[]"
+												},
+												"typeName": {
+													"baseType": {
+														"id": 171,
+														"name": "uint256",
+														"nodeType": "ElementaryTypeName",
+														"src": "5901:7:0",
+														"typeDescriptions": {
+															"typeIdentifier": "t_uint256",
+															"typeString": "uint256"
+														}
+													},
+													"id": 172,
+													"nodeType": "ArrayTypeName",
+													"src": "5901:9:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_array$_t_uint256_$dyn_storage_ptr",
+														"typeString": "uint256[]"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "5882:41:0"
+									},
+									"src": "5863:61:0"
+								},
+								{
+									"anonymous": false,
+									"eventSelector": "ede4aee4284b8033b84c1aadcc51b229a4e46e6b42ab40092e237f07508b4626",
+									"id": 179,
+									"name": "ProtocolFeeBpUpdated",
+									"nameLocation": "5935:20:0",
+									"nodeType": "EventDefinition",
+									"parameters": {
+										"id": 178,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 177,
+												"indexed": false,
+												"mutability": "mutable",
+												"name": "protocolFeeBp",
+												"nameLocation": "5963:13:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 179,
+												"src": "5956:20:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint16",
+													"typeString": "uint16"
+												},
+												"typeName": {
+													"id": 176,
+													"name": "uint16",
+													"nodeType": "ElementaryTypeName",
+													"src": "5956:6:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint16",
+														"typeString": "uint16"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "5955:22:0"
+									},
+									"src": "5929:49:0"
+								},
+								{
+									"anonymous": false,
+									"eventSelector": "c1b5345cce283376356748dc57f2dfa7120431d016fc7ca9ba641bc65f91411d",
+									"id": 183,
+									"name": "ProtocolFeeRecipientUpdated",
+									"nameLocation": "5989:27:0",
+									"nodeType": "EventDefinition",
+									"parameters": {
+										"id": 182,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 181,
+												"indexed": false,
+												"mutability": "mutable",
+												"name": "protocolFeeRecipient",
+												"nameLocation": "6025:20:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 183,
+												"src": "6017:28:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_address",
+													"typeString": "address"
+												},
+												"typeName": {
+													"id": 180,
+													"name": "address",
+													"nodeType": "ElementaryTypeName",
+													"src": "6017:7:0",
+													"stateMutability": "nonpayable",
+													"typeDescriptions": {
+														"typeIdentifier": "t_address",
+														"typeString": "address"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "6016:30:0"
+									},
+									"src": "5983:64:0"
+								},
+								{
+									"anonymous": false,
+									"eventSelector": "c1191e7178b58ad510709587719f39ec315fa79e81ee7ba5c5ef3c894e94a651",
+									"id": 190,
+									"name": "RaffleStatusUpdated",
+									"nameLocation": "6058:19:0",
+									"nodeType": "EventDefinition",
+									"parameters": {
+										"id": 189,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 185,
+												"indexed": false,
+												"mutability": "mutable",
+												"name": "raffleId",
+												"nameLocation": "6086:8:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 190,
+												"src": "6078:16:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 184,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "6078:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											},
+											{
+												"constant": false,
+												"id": 188,
+												"indexed": false,
+												"mutability": "mutable",
+												"name": "status",
+												"nameLocation": "6109:6:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 190,
+												"src": "6096:19:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_enum$_RaffleStatus_$11",
+													"typeString": "enum IRaffle.RaffleStatus"
+												},
+												"typeName": {
+													"id": 187,
+													"nodeType": "UserDefinedTypeName",
+													"pathNode": {
+														"id": 186,
+														"name": "RaffleStatus",
+														"nameLocations": [
+															"6096:12:0"
+														],
+														"nodeType": "IdentifierPath",
+														"referencedDeclaration": 11,
+														"src": "6096:12:0"
+													},
+													"referencedDeclaration": 11,
+													"src": "6096:12:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_enum$_RaffleStatus_$11",
+														"typeString": "enum IRaffle.RaffleStatus"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "6077:39:0"
+									},
+									"src": "6052:65:0"
+								},
+								{
+									"anonymous": false,
+									"eventSelector": "3d94fecedaa4f90b8bd459797adb95f5bb11426025c5541390d9ccc1ad1b60a1",
+									"id": 196,
+									"name": "RandomnessRequested",
+									"nameLocation": "6128:19:0",
+									"nodeType": "EventDefinition",
+									"parameters": {
+										"id": 195,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 192,
+												"indexed": false,
+												"mutability": "mutable",
+												"name": "raffleId",
+												"nameLocation": "6156:8:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 196,
+												"src": "6148:16:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 191,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "6148:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											},
+											{
+												"constant": false,
+												"id": 194,
+												"indexed": false,
+												"mutability": "mutable",
+												"name": "requestId",
+												"nameLocation": "6174:9:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 196,
+												"src": "6166:17:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 193,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "6166:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "6147:37:0"
+									},
+									"src": "6122:63:0"
+								},
+								{
+									"errorSelector": "a85e6f1a",
+									"id": 198,
+									"name": "AlreadyRefunded",
+									"nameLocation": "6197:15:0",
+									"nodeType": "ErrorDefinition",
+									"parameters": {
+										"id": 197,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "6212:2:0"
+									},
+									"src": "6191:24:0"
+								},
+								{
+									"errorSelector": "f9ad93f5",
+									"id": 200,
+									"name": "CutoffTimeNotReached",
+									"nameLocation": "6226:20:0",
+									"nodeType": "ErrorDefinition",
+									"parameters": {
+										"id": 199,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "6246:2:0"
+									},
+									"src": "6220:29:0"
+								},
+								{
+									"errorSelector": "b68c78dc",
+									"id": 202,
+									"name": "CutoffTimeReached",
+									"nameLocation": "6260:17:0",
+									"nodeType": "ErrorDefinition",
+									"parameters": {
+										"id": 201,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "6277:2:0"
+									},
+									"src": "6254:26:0"
+								},
+								{
+									"errorSelector": "f4c0ca6e",
+									"id": 204,
+									"name": "DrawExpirationTimeNotReached",
+									"nameLocation": "6291:28:0",
+									"nodeType": "ErrorDefinition",
+									"parameters": {
+										"id": 203,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "6319:2:0"
+									},
+									"src": "6285:37:0"
+								},
+								{
+									"errorSelector": "8ffff980",
+									"id": 206,
+									"name": "InsufficientNativeTokensSupplied",
+									"nameLocation": "6333:32:0",
+									"nodeType": "ErrorDefinition",
+									"parameters": {
+										"id": 205,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "6365:2:0"
+									},
+									"src": "6327:41:0"
+								},
+								{
+									"errorSelector": "48f5c3ed",
+									"id": 208,
+									"name": "InvalidCaller",
+									"nameLocation": "6379:13:0",
+									"nodeType": "ErrorDefinition",
+									"parameters": {
+										"id": 207,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "6392:2:0"
+									},
+									"src": "6373:22:0"
+								},
+								{
+									"errorSelector": "f5993428",
+									"id": 210,
+									"name": "InvalidCurrency",
+									"nameLocation": "6406:15:0",
+									"nodeType": "ErrorDefinition",
+									"parameters": {
+										"id": 209,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "6421:2:0"
+									},
+									"src": "6400:24:0"
+								},
+								{
+									"errorSelector": "ce8f4bfd",
+									"id": 212,
+									"name": "InvalidCutoffTime",
+									"nameLocation": "6435:17:0",
+									"nodeType": "ErrorDefinition",
+									"parameters": {
+										"id": 211,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "6452:2:0"
+									},
+									"src": "6429:26:0"
+								},
+								{
+									"errorSelector": "63df8171",
+									"id": 214,
+									"name": "InvalidIndex",
+									"nameLocation": "6466:12:0",
+									"nodeType": "ErrorDefinition",
+									"parameters": {
+										"id": 213,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "6478:2:0"
+									},
+									"src": "6460:21:0"
+								},
+								{
+									"errorSelector": "0b9752e0",
+									"id": 216,
+									"name": "InvalidPricingOption",
+									"nameLocation": "6492:20:0",
+									"nodeType": "ErrorDefinition",
+									"parameters": {
+										"id": 215,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "6512:2:0"
+									},
+									"src": "6486:29:0"
+								},
+								{
+									"errorSelector": "5f12e2ee",
+									"id": 218,
+									"name": "InvalidPrize",
+									"nameLocation": "6526:12:0",
+									"nodeType": "ErrorDefinition",
+									"parameters": {
+										"id": 217,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "6538:2:0"
+									},
+									"src": "6520:21:0"
+								},
+								{
+									"errorSelector": "ab13062d",
+									"id": 220,
+									"name": "InvalidPrizesCount",
+									"nameLocation": "6552:18:0",
+									"nodeType": "ErrorDefinition",
+									"parameters": {
+										"id": 219,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "6570:2:0"
+									},
+									"src": "6546:27:0"
+								},
+								{
+									"errorSelector": "4929acd7",
+									"id": 222,
+									"name": "InvalidProtocolFeeBp",
+									"nameLocation": "6584:20:0",
+									"nodeType": "ErrorDefinition",
+									"parameters": {
+										"id": 221,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "6604:2:0"
+									},
+									"src": "6578:29:0"
+								},
+								{
+									"errorSelector": "3106a0c7",
+									"id": 224,
+									"name": "InvalidProtocolFeeRecipient",
+									"nameLocation": "6618:27:0",
+									"nodeType": "ErrorDefinition",
+									"parameters": {
+										"id": 223,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "6645:2:0"
+									},
+									"src": "6612:36:0"
+								},
+								{
+									"errorSelector": "f525e320",
+									"id": 226,
+									"name": "InvalidStatus",
+									"nameLocation": "6659:13:0",
+									"nodeType": "ErrorDefinition",
+									"parameters": {
+										"id": 225,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "6672:2:0"
+									},
+									"src": "6653:22:0"
+								},
+								{
+									"errorSelector": "804a1e02",
+									"id": 228,
+									"name": "InvalidWinnersCount",
+									"nameLocation": "6686:19:0",
+									"nodeType": "ErrorDefinition",
+									"parameters": {
+										"id": 227,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "6705:2:0"
+									},
+									"src": "6680:28:0"
+								},
+								{
+									"errorSelector": "d085f161",
+									"id": 230,
+									"name": "MaximumEntriesPerParticipantReached",
+									"nameLocation": "6719:35:0",
+									"nodeType": "ErrorDefinition",
+									"parameters": {
+										"id": 229,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "6754:2:0"
+									},
+									"src": "6713:44:0"
+								},
+								{
+									"errorSelector": "34b3fb3b",
+									"id": 232,
+									"name": "MaximumEntriesReached",
+									"nameLocation": "6768:21:0",
+									"nodeType": "ErrorDefinition",
+									"parameters": {
+										"id": 231,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "6789:2:0"
+									},
+									"src": "6762:30:0"
+								},
+								{
+									"errorSelector": "c2356312",
+									"id": 234,
+									"name": "PrizeAlreadyClaimed",
+									"nameLocation": "6803:19:0",
+									"nodeType": "ErrorDefinition",
+									"parameters": {
+										"id": 233,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "6822:2:0"
+									},
+									"src": "6797:28:0"
+								},
+								{
+									"errorSelector": "f9012132",
+									"id": 236,
+									"name": "RandomnessRequestAlreadyExists",
+									"nameLocation": "6836:30:0",
+									"nodeType": "ErrorDefinition",
+									"parameters": {
+										"id": 235,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "6866:2:0"
+									},
+									"src": "6830:39:0"
+								},
+								{
+									"errorSelector": "1b71a84c",
+									"id": 238,
+									"name": "RandomnessRequestDoesNotExist",
+									"nameLocation": "6880:29:0",
+									"nodeType": "ErrorDefinition",
+									"parameters": {
+										"id": 237,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "6909:2:0"
+									},
+									"src": "6874:38:0"
+								},
+								{
+									"documentation": {
+										"id": 239,
+										"nodeType": "StructuredDocumentation",
+										"src": "6918:159:0",
+										"text": " @notice Creates a new raffle.\n @param params The parameters of the raffle.\n @return raffleId The id of the newly created raffle."
+									},
+									"functionSelector": "d49a5630",
+									"id": 247,
+									"implemented": false,
+									"kind": "function",
+									"modifiers": [],
+									"name": "createRaffle",
+									"nameLocation": "7091:12:0",
+									"nodeType": "FunctionDefinition",
+									"parameters": {
+										"id": 243,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 242,
+												"mutability": "mutable",
+												"name": "params",
+												"nameLocation": "7134:6:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 247,
+												"src": "7104:36:0",
+												"stateVariable": false,
+												"storageLocation": "calldata",
+												"typeDescriptions": {
+													"typeIdentifier": "t_struct$_CreateRaffleCalldata_$124_calldata_ptr",
+													"typeString": "struct IRaffle.CreateRaffleCalldata"
+												},
+												"typeName": {
+													"id": 241,
+													"nodeType": "UserDefinedTypeName",
+													"pathNode": {
+														"id": 240,
+														"name": "CreateRaffleCalldata",
+														"nameLocations": [
+															"7104:20:0"
+														],
+														"nodeType": "IdentifierPath",
+														"referencedDeclaration": 124,
+														"src": "7104:20:0"
+													},
+													"referencedDeclaration": 124,
+													"src": "7104:20:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_struct$_CreateRaffleCalldata_$124_storage_ptr",
+														"typeString": "struct IRaffle.CreateRaffleCalldata"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "7103:38:0"
+									},
+									"returnParameters": {
+										"id": 246,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 245,
+												"mutability": "mutable",
+												"name": "raffleId",
+												"nameLocation": "7168:8:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 247,
+												"src": "7160:16:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 244,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "7160:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "7159:18:0"
+									},
+									"scope": 379,
+									"src": "7082:96:0",
+									"stateMutability": "nonpayable",
+									"virtual": false,
+									"visibility": "external"
+								},
+								{
+									"documentation": {
+										"id": 248,
+										"nodeType": "StructuredDocumentation",
+										"src": "7184:101:0",
+										"text": " @notice Deposits prizes for a raffle.\n @param raffleId The id of the raffle."
+									},
+									"functionSelector": "82d6848c",
+									"id": 253,
+									"implemented": false,
+									"kind": "function",
+									"modifiers": [],
+									"name": "depositPrizes",
+									"nameLocation": "7299:13:0",
+									"nodeType": "FunctionDefinition",
+									"parameters": {
+										"id": 251,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 250,
+												"mutability": "mutable",
+												"name": "raffleId",
+												"nameLocation": "7321:8:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 253,
+												"src": "7313:16:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 249,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "7313:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "7312:18:0"
+									},
+									"returnParameters": {
+										"id": 252,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "7347:0:0"
+									},
+									"scope": 379,
+									"src": "7290:58:0",
+									"stateMutability": "payable",
+									"virtual": false,
+									"visibility": "external"
+								},
+								{
+									"documentation": {
+										"id": 254,
+										"nodeType": "StructuredDocumentation",
+										"src": "7354:109:0",
+										"text": " @notice Enters a raffle or multiple raffles.\n @param entries The entries to be made."
+									},
+									"functionSelector": "f42df132",
+									"id": 261,
+									"implemented": false,
+									"kind": "function",
+									"modifiers": [],
+									"name": "enterRaffles",
+									"nameLocation": "7477:12:0",
+									"nodeType": "FunctionDefinition",
+									"parameters": {
+										"id": 259,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 258,
+												"mutability": "mutable",
+												"name": "entries",
+												"nameLocation": "7515:7:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 261,
+												"src": "7490:32:0",
+												"stateVariable": false,
+												"storageLocation": "calldata",
+												"typeDescriptions": {
+													"typeIdentifier": "t_array$_t_struct$_EntryCalldata_$102_calldata_ptr_$dyn_calldata_ptr",
+													"typeString": "struct IRaffle.EntryCalldata[]"
+												},
+												"typeName": {
+													"baseType": {
+														"id": 256,
+														"nodeType": "UserDefinedTypeName",
+														"pathNode": {
+															"id": 255,
+															"name": "EntryCalldata",
+															"nameLocations": [
+																"7490:13:0"
+															],
+															"nodeType": "IdentifierPath",
+															"referencedDeclaration": 102,
+															"src": "7490:13:0"
+														},
+														"referencedDeclaration": 102,
+														"src": "7490:13:0",
+														"typeDescriptions": {
+															"typeIdentifier": "t_struct$_EntryCalldata_$102_storage_ptr",
+															"typeString": "struct IRaffle.EntryCalldata"
+														}
+													},
+													"id": 257,
+													"nodeType": "ArrayTypeName",
+													"src": "7490:15:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_array$_t_struct$_EntryCalldata_$102_storage_$dyn_storage_ptr",
+														"typeString": "struct IRaffle.EntryCalldata[]"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "7489:34:0"
+									},
+									"returnParameters": {
+										"id": 260,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "7540:0:0"
+									},
+									"scope": 379,
+									"src": "7468:73:0",
+									"stateMutability": "payable",
+									"virtual": false,
+									"visibility": "external"
+								},
+								{
+									"documentation": {
+										"id": 262,
+										"nodeType": "StructuredDocumentation",
+										"src": "7547:169:0",
+										"text": " @notice Select the winners for a raffle based on the random words returned by Chainlink.\n @param requestId The request id returned by Chainlink."
+									},
+									"functionSelector": "39a2eb2a",
+									"id": 267,
+									"implemented": false,
+									"kind": "function",
+									"modifiers": [],
+									"name": "selectWinners",
+									"nameLocation": "7730:13:0",
+									"nodeType": "FunctionDefinition",
+									"parameters": {
+										"id": 265,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 264,
+												"mutability": "mutable",
+												"name": "requestId",
+												"nameLocation": "7752:9:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 267,
+												"src": "7744:17:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 263,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "7744:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "7743:19:0"
+									},
+									"returnParameters": {
+										"id": 266,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "7771:0:0"
+									},
+									"scope": 379,
+									"src": "7721:51:0",
+									"stateMutability": "nonpayable",
+									"virtual": false,
+									"visibility": "external"
+								},
+								{
+									"documentation": {
+										"id": 268,
+										"nodeType": "StructuredDocumentation",
+										"src": "7778:223:0",
+										"text": " @notice Claims the prizes for a winner. A winner can claim multiple prizes\n         from multiple raffles in a single transaction.\n @param claimPrizesCalldata The calldata for claiming prizes."
+									},
+									"functionSelector": "6f30d7b5",
+									"id": 275,
+									"implemented": false,
+									"kind": "function",
+									"modifiers": [],
+									"name": "claimPrizes",
+									"nameLocation": "8015:11:0",
+									"nodeType": "FunctionDefinition",
+									"parameters": {
+										"id": 273,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 272,
+												"mutability": "mutable",
+												"name": "claimPrizesCalldata",
+												"nameLocation": "8058:19:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 275,
+												"src": "8027:50:0",
+												"stateVariable": false,
+												"storageLocation": "calldata",
+												"typeDescriptions": {
+													"typeIdentifier": "t_array$_t_struct$_ClaimPrizesCalldata_$130_calldata_ptr_$dyn_calldata_ptr",
+													"typeString": "struct IRaffle.ClaimPrizesCalldata[]"
+												},
+												"typeName": {
+													"baseType": {
+														"id": 270,
+														"nodeType": "UserDefinedTypeName",
+														"pathNode": {
+															"id": 269,
+															"name": "ClaimPrizesCalldata",
+															"nameLocations": [
+																"8027:19:0"
+															],
+															"nodeType": "IdentifierPath",
+															"referencedDeclaration": 130,
+															"src": "8027:19:0"
+														},
+														"referencedDeclaration": 130,
+														"src": "8027:19:0",
+														"typeDescriptions": {
+															"typeIdentifier": "t_struct$_ClaimPrizesCalldata_$130_storage_ptr",
+															"typeString": "struct IRaffle.ClaimPrizesCalldata"
+														}
+													},
+													"id": 271,
+													"nodeType": "ArrayTypeName",
+													"src": "8027:21:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_array$_t_struct$_ClaimPrizesCalldata_$130_storage_$dyn_storage_ptr",
+														"typeString": "struct IRaffle.ClaimPrizesCalldata[]"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "8026:52:0"
+									},
+									"returnParameters": {
+										"id": 274,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "8087:0:0"
+									},
+									"scope": 379,
+									"src": "8006:82:0",
+									"stateMutability": "nonpayable",
+									"virtual": false,
+									"visibility": "external"
+								},
+								{
+									"documentation": {
+										"id": 276,
+										"nodeType": "StructuredDocumentation",
+										"src": "8094:111:0",
+										"text": " @notice Claims the fees collected for a raffle.\n @param raffleId The id of the raffle."
+									},
+									"functionSelector": "ac68a748",
+									"id": 281,
+									"implemented": false,
+									"kind": "function",
+									"modifiers": [],
+									"name": "claimFees",
+									"nameLocation": "8219:9:0",
+									"nodeType": "FunctionDefinition",
+									"parameters": {
+										"id": 279,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 278,
+												"mutability": "mutable",
+												"name": "raffleId",
+												"nameLocation": "8237:8:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 281,
+												"src": "8229:16:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 277,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "8229:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "8228:18:0"
+									},
+									"returnParameters": {
+										"id": 280,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "8255:0:0"
+									},
+									"scope": 379,
+									"src": "8210:46:0",
+									"stateMutability": "nonpayable",
+									"virtual": false,
+									"visibility": "external"
+								},
+								{
+									"documentation": {
+										"id": 282,
+										"nodeType": "StructuredDocumentation",
+										"src": "8262:141:0",
+										"text": " @notice Cancels a raffle beyond cut-off time without meeting minimum entries.\n @param raffleId The id of the raffle."
+									},
+									"functionSelector": "40e58ee5",
+									"id": 287,
+									"implemented": false,
+									"kind": "function",
+									"modifiers": [],
+									"name": "cancel",
+									"nameLocation": "8417:6:0",
+									"nodeType": "FunctionDefinition",
+									"parameters": {
+										"id": 285,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 284,
+												"mutability": "mutable",
+												"name": "raffleId",
+												"nameLocation": "8432:8:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 287,
+												"src": "8424:16:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 283,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "8424:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "8423:18:0"
+									},
+									"returnParameters": {
+										"id": 286,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "8450:0:0"
+									},
+									"scope": 379,
+									"src": "8408:43:0",
+									"stateMutability": "nonpayable",
+									"virtual": false,
+									"visibility": "external"
+								},
+								{
+									"documentation": {
+										"id": 288,
+										"nodeType": "StructuredDocumentation",
+										"src": "8457:250:0",
+										"text": " @notice Cancels a raffle after randomness request if the randomness request\n         does not arrive after a certain amount of time.\n         Only callable by contract owner.\n @param raffleId The id of the raffle."
+									},
+									"functionSelector": "a72844ba",
+									"id": 293,
+									"implemented": false,
+									"kind": "function",
+									"modifiers": [],
+									"name": "cancelAfterRandomnessRequest",
+									"nameLocation": "8721:28:0",
+									"nodeType": "FunctionDefinition",
+									"parameters": {
+										"id": 291,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 290,
+												"mutability": "mutable",
+												"name": "raffleId",
+												"nameLocation": "8758:8:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 293,
+												"src": "8750:16:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 289,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "8750:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "8749:18:0"
+									},
+									"returnParameters": {
+										"id": 292,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "8776:0:0"
+									},
+									"scope": 379,
+									"src": "8712:65:0",
+									"stateMutability": "nonpayable",
+									"virtual": false,
+									"visibility": "external"
+								},
+								{
+									"documentation": {
+										"id": 294,
+										"nodeType": "StructuredDocumentation",
+										"src": "8783:145:0",
+										"text": " @notice Withdraws the prizes for a raffle after it has been marked as refundable.\n @param raffleId The id of the raffle."
+									},
+									"functionSelector": "534fff0e",
+									"id": 299,
+									"implemented": false,
+									"kind": "function",
+									"modifiers": [],
+									"name": "withdrawPrizes",
+									"nameLocation": "8942:14:0",
+									"nodeType": "FunctionDefinition",
+									"parameters": {
+										"id": 297,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 296,
+												"mutability": "mutable",
+												"name": "raffleId",
+												"nameLocation": "8965:8:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 299,
+												"src": "8957:16:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 295,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "8957:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "8956:18:0"
+									},
+									"returnParameters": {
+										"id": 298,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "8983:0:0"
+									},
+									"scope": 379,
+									"src": "8933:51:0",
+									"stateMutability": "nonpayable",
+									"virtual": false,
+									"visibility": "external"
+								},
+								{
+									"documentation": {
+										"id": 300,
+										"nodeType": "StructuredDocumentation",
+										"src": "8990:116:0",
+										"text": " @notice Claims the refund for a cancelled raffle.\n @param raffleIds The ids of the raffles."
+									},
+									"functionSelector": "f54a6f83",
+									"id": 306,
+									"implemented": false,
+									"kind": "function",
+									"modifiers": [],
+									"name": "claimRefund",
+									"nameLocation": "9120:11:0",
+									"nodeType": "FunctionDefinition",
+									"parameters": {
+										"id": 304,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 303,
+												"mutability": "mutable",
+												"name": "raffleIds",
+												"nameLocation": "9151:9:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 306,
+												"src": "9132:28:0",
+												"stateVariable": false,
+												"storageLocation": "calldata",
+												"typeDescriptions": {
+													"typeIdentifier": "t_array$_t_uint256_$dyn_calldata_ptr",
+													"typeString": "uint256[]"
+												},
+												"typeName": {
+													"baseType": {
+														"id": 301,
+														"name": "uint256",
+														"nodeType": "ElementaryTypeName",
+														"src": "9132:7:0",
+														"typeDescriptions": {
+															"typeIdentifier": "t_uint256",
+															"typeString": "uint256"
+														}
+													},
+													"id": 302,
+													"nodeType": "ArrayTypeName",
+													"src": "9132:9:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_array$_t_uint256_$dyn_storage_ptr",
+														"typeString": "uint256[]"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "9131:30:0"
+									},
+									"returnParameters": {
+										"id": 305,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "9170:0:0"
+									},
+									"scope": 379,
+									"src": "9111:60:0",
+									"stateMutability": "nonpayable",
+									"virtual": false,
+									"visibility": "external"
+								},
+								{
+									"documentation": {
+										"id": 307,
+										"nodeType": "StructuredDocumentation",
+										"src": "9177:138:0",
+										"text": " @notice Claims the protocol fees collected for a raffle.\n @param currency The currency of the fees to be claimed."
+									},
+									"functionSelector": "69ce6d47",
+									"id": 312,
+									"implemented": false,
+									"kind": "function",
+									"modifiers": [],
+									"name": "claimProtocolFees",
+									"nameLocation": "9329:17:0",
+									"nodeType": "FunctionDefinition",
+									"parameters": {
+										"id": 310,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 309,
+												"mutability": "mutable",
+												"name": "currency",
+												"nameLocation": "9355:8:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 312,
+												"src": "9347:16:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_address",
+													"typeString": "address"
+												},
+												"typeName": {
+													"id": 308,
+													"name": "address",
+													"nodeType": "ElementaryTypeName",
+													"src": "9347:7:0",
+													"stateMutability": "nonpayable",
+													"typeDescriptions": {
+														"typeIdentifier": "t_address",
+														"typeString": "address"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "9346:18:0"
+									},
+									"returnParameters": {
+										"id": 311,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "9373:0:0"
+									},
+									"scope": 379,
+									"src": "9320:54:0",
+									"stateMutability": "nonpayable",
+									"virtual": false,
+									"visibility": "external"
+								},
+								{
+									"documentation": {
+										"id": 313,
+										"nodeType": "StructuredDocumentation",
+										"src": "9380:160:0",
+										"text": " @notice Sets the protocol fee in basis points. Only callable by contract owner.\n @param protocolFeeBp The protocol fee in basis points."
+									},
+									"functionSelector": "2a6a4eb8",
+									"id": 318,
+									"implemented": false,
+									"kind": "function",
+									"modifiers": [],
+									"name": "setProtocolFeeBp",
+									"nameLocation": "9554:16:0",
+									"nodeType": "FunctionDefinition",
+									"parameters": {
+										"id": 316,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 315,
+												"mutability": "mutable",
+												"name": "protocolFeeBp",
+												"nameLocation": "9578:13:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 318,
+												"src": "9571:20:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint16",
+													"typeString": "uint16"
+												},
+												"typeName": {
+													"id": 314,
+													"name": "uint16",
+													"nodeType": "ElementaryTypeName",
+													"src": "9571:6:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint16",
+														"typeString": "uint16"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "9570:22:0"
+									},
+									"returnParameters": {
+										"id": 317,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "9601:0:0"
+									},
+									"scope": 379,
+									"src": "9545:57:0",
+									"stateMutability": "nonpayable",
+									"virtual": false,
+									"visibility": "external"
+								},
+								{
+									"documentation": {
+										"id": 319,
+										"nodeType": "StructuredDocumentation",
+										"src": "9608:155:0",
+										"text": " @notice Sets the protocol fee recipient. Only callable by contract owner.\n @param protocolFeeRecipient The protocol fee recipient."
+									},
+									"functionSelector": "e521cb92",
+									"id": 324,
+									"implemented": false,
+									"kind": "function",
+									"modifiers": [],
+									"name": "setProtocolFeeRecipient",
+									"nameLocation": "9777:23:0",
+									"nodeType": "FunctionDefinition",
+									"parameters": {
+										"id": 322,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 321,
+												"mutability": "mutable",
+												"name": "protocolFeeRecipient",
+												"nameLocation": "9809:20:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 324,
+												"src": "9801:28:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_address",
+													"typeString": "address"
+												},
+												"typeName": {
+													"id": 320,
+													"name": "address",
+													"nodeType": "ElementaryTypeName",
+													"src": "9801:7:0",
+													"stateMutability": "nonpayable",
+													"typeDescriptions": {
+														"typeIdentifier": "t_address",
+														"typeString": "address"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "9800:30:0"
+									},
+									"returnParameters": {
+										"id": 323,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "9839:0:0"
+									},
+									"scope": 379,
+									"src": "9768:72:0",
+									"stateMutability": "nonpayable",
+									"virtual": false,
+									"visibility": "external"
+								},
+								{
+									"documentation": {
+										"id": 325,
+										"nodeType": "StructuredDocumentation",
+										"src": "9846:264:0",
+										"text": " @notice This function allows the owner to update currency statuses.\n @param currencies Currency addresses (address(0) for ETH)\n @param isAllowed Whether the currencies should be allowed for trading\n @dev Only callable by owner."
+									},
+									"functionSelector": "1e9f1a82",
+									"id": 333,
+									"implemented": false,
+									"kind": "function",
+									"modifiers": [],
+									"name": "updateCurrenciesStatus",
+									"nameLocation": "10124:22:0",
+									"nodeType": "FunctionDefinition",
+									"parameters": {
+										"id": 331,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 328,
+												"mutability": "mutable",
+												"name": "currencies",
+												"nameLocation": "10166:10:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 333,
+												"src": "10147:29:0",
+												"stateVariable": false,
+												"storageLocation": "calldata",
+												"typeDescriptions": {
+													"typeIdentifier": "t_array$_t_address_$dyn_calldata_ptr",
+													"typeString": "address[]"
+												},
+												"typeName": {
+													"baseType": {
+														"id": 326,
+														"name": "address",
+														"nodeType": "ElementaryTypeName",
+														"src": "10147:7:0",
+														"stateMutability": "nonpayable",
+														"typeDescriptions": {
+															"typeIdentifier": "t_address",
+															"typeString": "address"
+														}
+													},
+													"id": 327,
+													"nodeType": "ArrayTypeName",
+													"src": "10147:9:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_array$_t_address_$dyn_storage_ptr",
+														"typeString": "address[]"
+													}
+												},
+												"visibility": "internal"
+											},
+											{
+												"constant": false,
+												"id": 330,
+												"mutability": "mutable",
+												"name": "isAllowed",
+												"nameLocation": "10183:9:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 333,
+												"src": "10178:14:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_bool",
+													"typeString": "bool"
+												},
+												"typeName": {
+													"id": 329,
+													"name": "bool",
+													"nodeType": "ElementaryTypeName",
+													"src": "10178:4:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_bool",
+														"typeString": "bool"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "10146:47:0"
+									},
+									"returnParameters": {
+										"id": 332,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "10202:0:0"
+									},
+									"scope": 379,
+									"src": "10115:88:0",
+									"stateMutability": "nonpayable",
+									"virtual": false,
+									"visibility": "external"
+								},
+								{
+									"documentation": {
+										"id": 334,
+										"nodeType": "StructuredDocumentation",
+										"src": "10209:96:0",
+										"text": " @notice Toggle the contract's paused status. Only callable by contract owner."
+									},
+									"functionSelector": "36566f06",
+									"id": 337,
+									"implemented": false,
+									"kind": "function",
+									"modifiers": [],
+									"name": "togglePaused",
+									"nameLocation": "10319:12:0",
+									"nodeType": "FunctionDefinition",
+									"parameters": {
+										"id": 335,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "10331:2:0"
+									},
+									"returnParameters": {
+										"id": 336,
+										"nodeType": "ParameterList",
+										"parameters": [],
+										"src": "10342:0:0"
+									},
+									"scope": 379,
+									"src": "10310:33:0",
+									"stateMutability": "nonpayable",
+									"virtual": false,
+									"visibility": "external"
+								},
+								{
+									"documentation": {
+										"id": 338,
+										"nodeType": "StructuredDocumentation",
+										"src": "10349:152:0",
+										"text": " @notice Gets the winners for a raffle.\n @param raffleId The id of the raffle.\n @return winners The winners of the raffle."
+									},
+									"functionSelector": "6b1426a4",
+									"id": 347,
+									"implemented": false,
+									"kind": "function",
+									"modifiers": [],
+									"name": "getWinners",
+									"nameLocation": "10515:10:0",
+									"nodeType": "FunctionDefinition",
+									"parameters": {
+										"id": 341,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 340,
+												"mutability": "mutable",
+												"name": "raffleId",
+												"nameLocation": "10534:8:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 347,
+												"src": "10526:16:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 339,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "10526:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "10525:18:0"
+									},
+									"returnParameters": {
+										"id": 346,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 345,
+												"mutability": "mutable",
+												"name": "",
+												"nameLocation": "-1:-1:-1",
+												"nodeType": "VariableDeclaration",
+												"scope": 347,
+												"src": "10567:15:0",
+												"stateVariable": false,
+												"storageLocation": "memory",
+												"typeDescriptions": {
+													"typeIdentifier": "t_array$_t_struct$_Winner_$35_memory_ptr_$dyn_memory_ptr",
+													"typeString": "struct IRaffle.Winner[]"
+												},
+												"typeName": {
+													"baseType": {
+														"id": 343,
+														"nodeType": "UserDefinedTypeName",
+														"pathNode": {
+															"id": 342,
+															"name": "Winner",
+															"nameLocations": [
+																"10567:6:0"
+															],
+															"nodeType": "IdentifierPath",
+															"referencedDeclaration": 35,
+															"src": "10567:6:0"
+														},
+														"referencedDeclaration": 35,
+														"src": "10567:6:0",
+														"typeDescriptions": {
+															"typeIdentifier": "t_struct$_Winner_$35_storage_ptr",
+															"typeString": "struct IRaffle.Winner"
+														}
+													},
+													"id": 344,
+													"nodeType": "ArrayTypeName",
+													"src": "10567:8:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_array$_t_struct$_Winner_$35_storage_$dyn_storage_ptr",
+														"typeString": "struct IRaffle.Winner[]"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "10566:17:0"
+									},
+									"scope": 379,
+									"src": "10506:78:0",
+									"stateMutability": "view",
+									"virtual": false,
+									"visibility": "external"
+								},
+								{
+									"documentation": {
+										"id": 348,
+										"nodeType": "StructuredDocumentation",
+										"src": "10590:176:0",
+										"text": " @notice Gets the pricing options for a raffle.\n @param raffleId The id of the raffle.\n @return pricingOptions The pricing options for the raffle."
+									},
+									"functionSelector": "31fe74a9",
+									"id": 358,
+									"implemented": false,
+									"kind": "function",
+									"modifiers": [],
+									"name": "getPricingOptions",
+									"nameLocation": "10780:17:0",
+									"nodeType": "FunctionDefinition",
+									"parameters": {
+										"id": 351,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 350,
+												"mutability": "mutable",
+												"name": "raffleId",
+												"nameLocation": "10806:8:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 358,
+												"src": "10798:16:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 349,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "10798:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "10797:18:0"
+									},
+									"returnParameters": {
+										"id": 357,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 356,
+												"mutability": "mutable",
+												"name": "",
+												"nameLocation": "-1:-1:-1",
+												"nodeType": "VariableDeclaration",
+												"scope": 358,
+												"src": "10839:23:0",
+												"stateVariable": false,
+												"storageLocation": "memory",
+												"typeDescriptions": {
+													"typeIdentifier": "t_array$_t_struct$_PricingOption_$21_memory_ptr_$5_memory_ptr",
+													"typeString": "struct IRaffle.PricingOption[5]"
+												},
+												"typeName": {
+													"baseType": {
+														"id": 353,
+														"nodeType": "UserDefinedTypeName",
+														"pathNode": {
+															"id": 352,
+															"name": "PricingOption",
+															"nameLocations": [
+																"10839:13:0"
+															],
+															"nodeType": "IdentifierPath",
+															"referencedDeclaration": 21,
+															"src": "10839:13:0"
+														},
+														"referencedDeclaration": 21,
+														"src": "10839:13:0",
+														"typeDescriptions": {
+															"typeIdentifier": "t_struct$_PricingOption_$21_storage_ptr",
+															"typeString": "struct IRaffle.PricingOption"
+														}
+													},
+													"id": 355,
+													"length": {
+														"hexValue": "35",
+														"id": 354,
+														"isConstant": false,
+														"isLValue": false,
+														"isPure": true,
+														"kind": "number",
+														"lValueRequested": false,
+														"nodeType": "Literal",
+														"src": "10853:1:0",
+														"typeDescriptions": {
+															"typeIdentifier": "t_rational_5_by_1",
+															"typeString": "int_const 5"
+														},
+														"value": "5"
+													},
+													"nodeType": "ArrayTypeName",
+													"src": "10839:16:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_array$_t_struct$_PricingOption_$21_storage_$5_storage_ptr",
+														"typeString": "struct IRaffle.PricingOption[5]"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "10838:25:0"
+									},
+									"scope": 379,
+									"src": "10771:93:0",
+									"stateMutability": "view",
+									"virtual": false,
+									"visibility": "external"
+								},
+								{
+									"documentation": {
+										"id": 359,
+										"nodeType": "StructuredDocumentation",
+										"src": "10870:153:0",
+										"text": " @notice Gets the prizes for a raffle.\n @param raffleId The id of the raffle.\n @return prizes The prizes to be distributed."
+									},
+									"functionSelector": "cc307795",
+									"id": 368,
+									"implemented": false,
+									"kind": "function",
+									"modifiers": [],
+									"name": "getPrizes",
+									"nameLocation": "11037:9:0",
+									"nodeType": "FunctionDefinition",
+									"parameters": {
+										"id": 362,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 361,
+												"mutability": "mutable",
+												"name": "raffleId",
+												"nameLocation": "11055:8:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 368,
+												"src": "11047:16:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 360,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "11047:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "11046:18:0"
+									},
+									"returnParameters": {
+										"id": 367,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 366,
+												"mutability": "mutable",
+												"name": "",
+												"nameLocation": "-1:-1:-1",
+												"nodeType": "VariableDeclaration",
+												"scope": 368,
+												"src": "11088:14:0",
+												"stateVariable": false,
+												"storageLocation": "memory",
+												"typeDescriptions": {
+													"typeIdentifier": "t_array$_t_struct$_Prize_$51_memory_ptr_$dyn_memory_ptr",
+													"typeString": "struct IRaffle.Prize[]"
+												},
+												"typeName": {
+													"baseType": {
+														"id": 364,
+														"nodeType": "UserDefinedTypeName",
+														"pathNode": {
+															"id": 363,
+															"name": "Prize",
+															"nameLocations": [
+																"11088:5:0"
+															],
+															"nodeType": "IdentifierPath",
+															"referencedDeclaration": 51,
+															"src": "11088:5:0"
+														},
+														"referencedDeclaration": 51,
+														"src": "11088:5:0",
+														"typeDescriptions": {
+															"typeIdentifier": "t_struct$_Prize_$51_storage_ptr",
+															"typeString": "struct IRaffle.Prize"
+														}
+													},
+													"id": 365,
+													"nodeType": "ArrayTypeName",
+													"src": "11088:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_array$_t_struct$_Prize_$51_storage_$dyn_storage_ptr",
+														"typeString": "struct IRaffle.Prize[]"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "11087:16:0"
+									},
+									"scope": 379,
+									"src": "11028:76:0",
+									"stateMutability": "view",
+									"virtual": false,
+									"visibility": "external"
+								},
+								{
+									"documentation": {
+										"id": 369,
+										"nodeType": "StructuredDocumentation",
+										"src": "11110:161:0",
+										"text": " @notice Gets the entries for a raffle.\n @param raffleId The id of the raffle.\n @return entries The entries entered for the raffle."
+									},
+									"functionSelector": "d3549ebd",
+									"id": 378,
+									"implemented": false,
+									"kind": "function",
+									"modifiers": [],
+									"name": "getEntries",
+									"nameLocation": "11285:10:0",
+									"nodeType": "FunctionDefinition",
+									"parameters": {
+										"id": 372,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 371,
+												"mutability": "mutable",
+												"name": "raffleId",
+												"nameLocation": "11304:8:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 378,
+												"src": "11296:16:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 370,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "11296:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "11295:18:0"
+									},
+									"returnParameters": {
+										"id": 377,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 376,
+												"mutability": "mutable",
+												"name": "",
+												"nameLocation": "-1:-1:-1",
+												"nodeType": "VariableDeclaration",
+												"scope": 378,
+												"src": "11337:14:0",
+												"stateVariable": false,
+												"storageLocation": "memory",
+												"typeDescriptions": {
+													"typeIdentifier": "t_array$_t_struct$_Entry_$26_memory_ptr_$dyn_memory_ptr",
+													"typeString": "struct IRaffle.Entry[]"
+												},
+												"typeName": {
+													"baseType": {
+														"id": 374,
+														"nodeType": "UserDefinedTypeName",
+														"pathNode": {
+															"id": 373,
+															"name": "Entry",
+															"nameLocations": [
+																"11337:5:0"
+															],
+															"nodeType": "IdentifierPath",
+															"referencedDeclaration": 26,
+															"src": "11337:5:0"
+														},
+														"referencedDeclaration": 26,
+														"src": "11337:5:0",
+														"typeDescriptions": {
+															"typeIdentifier": "t_struct$_Entry_$26_storage_ptr",
+															"typeString": "struct IRaffle.Entry"
+														}
+													},
+													"id": 375,
+													"nodeType": "ArrayTypeName",
+													"src": "11337:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_array$_t_struct$_Entry_$26_storage_$dyn_storage_ptr",
+														"typeString": "struct IRaffle.Entry[]"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "11336:16:0"
+									},
+									"scope": 379,
+									"src": "11276:77:0",
+									"stateMutability": "view",
+									"virtual": false,
+									"visibility": "external"
+								}
+							],
+							"scope": 380,
+							"src": "57:11298:0",
+							"usedErrors": [
+								198,
+								200,
+								202,
+								204,
+								206,
+								208,
+								210,
+								212,
+								214,
+								216,
+								218,
+								220,
+								222,
+								224,
+								226,
+								228,
+								230,
+								232,
+								234,
+								236,
+								238
+							]
+						}
+					],
+					"src": "32:11324:0"
+				},
+				"id": 0
+			}
+		}
+	}
+}

@@ -1,0 +1,2041 @@
+{
+	"compiler": {
+		"version": "0.8.17+commit.8df45f5f"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_weth",
+						"type": "address"
+					},
+					{
+						"internalType": "bytes32",
+						"name": "_keyHash",
+						"type": "bytes32"
+					},
+					{
+						"internalType": "uint64",
+						"name": "_subscriptionId",
+						"type": "uint64"
+					},
+					{
+						"internalType": "address",
+						"name": "_vrfCoordinator",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "_owner",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "_protocolFeeRecipient",
+						"type": "address"
+					},
+					{
+						"internalType": "uint16",
+						"name": "_protocolFeeBp",
+						"type": "uint16"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "constructor"
+			},
+			{
+				"inputs": [],
+				"name": "AlreadyRefunded",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "CutoffTimeNotReached",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "CutoffTimeReached",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "DrawExpirationTimeNotReached",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "ERC1155SafeTransferFromFail",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "ERC20TransferFail",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "ERC20TransferFromFail",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "ERC721TransferFromFail",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "InsufficientNativeTokensSupplied",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "InvalidCaller",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "InvalidCurrency",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "InvalidCutoffTime",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "InvalidIndex",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "InvalidPricingOption",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "InvalidPrize",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "InvalidPrizesCount",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "InvalidProtocolFeeBp",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "InvalidProtocolFeeRecipient",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "InvalidStatus",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "InvalidWinnersCount",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "IsPaused",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "MaximumEntriesPerParticipantReached",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "MaximumEntriesReached",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "NoOngoingTransferInProgress",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "NotAContract",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "NotOwner",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "NotPaused",
+				"type": "error"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "have",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "want",
+						"type": "address"
+					}
+				],
+				"name": "OnlyCoordinatorCanFulfill",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "PrizeAlreadyClaimed",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "RandomnessRequestAlreadyExists",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "RandomnessRequestDoesNotExist",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "ReentrancyFail",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "RenouncementNotInProgress",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "TransferAlreadyInProgress",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "TransferNotInProgress",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "WrongPotentialOwner",
+				"type": "error"
+			},
+			{
+				"anonymous": false,
+				"inputs": [],
+				"name": "CancelOwnershipTransfer",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": false,
+						"internalType": "address[]",
+						"name": "currencies",
+						"type": "address[]"
+					},
+					{
+						"indexed": false,
+						"internalType": "bool",
+						"name": "isAllowed",
+						"type": "bool"
+					}
+				],
+				"name": "CurrenciesStatusUpdated",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "raffleId",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"internalType": "address",
+						"name": "buyer",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint208",
+						"name": "amount",
+						"type": "uint208"
+					}
+				],
+				"name": "EntryRefunded",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "raffleId",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"internalType": "address",
+						"name": "buyer",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint40",
+						"name": "entriesCount",
+						"type": "uint40"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint208",
+						"name": "price",
+						"type": "uint208"
+					}
+				],
+				"name": "EntrySold",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "raffleId",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					}
+				],
+				"name": "FeesClaimed",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [],
+				"name": "InitiateOwnershipRenouncement",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": false,
+						"internalType": "address",
+						"name": "previousOwner",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "address",
+						"name": "potentialOwner",
+						"type": "address"
+					}
+				],
+				"name": "InitiateOwnershipTransfer",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": false,
+						"internalType": "address",
+						"name": "newOwner",
+						"type": "address"
+					}
+				],
+				"name": "NewOwner",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": false,
+						"internalType": "address",
+						"name": "account",
+						"type": "address"
+					}
+				],
+				"name": "Paused",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "raffleId",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256[]",
+						"name": "winnerIndex",
+						"type": "uint256[]"
+					}
+				],
+				"name": "PrizesClaimed",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": false,
+						"internalType": "uint16",
+						"name": "protocolFeeBp",
+						"type": "uint16"
+					}
+				],
+				"name": "ProtocolFeeBpUpdated",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": false,
+						"internalType": "address",
+						"name": "protocolFeeRecipient",
+						"type": "address"
+					}
+				],
+				"name": "ProtocolFeeRecipientUpdated",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "raffleId",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"internalType": "enum IRaffle.RaffleStatus",
+						"name": "status",
+						"type": "uint8"
+					}
+				],
+				"name": "RaffleStatusUpdated",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "raffleId",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "requestId",
+						"type": "uint256"
+					}
+				],
+				"name": "RandomnessRequested",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": false,
+						"internalType": "address",
+						"name": "account",
+						"type": "address"
+					}
+				],
+				"name": "Unpaused",
+				"type": "event"
+			},
+			{
+				"inputs": [],
+				"name": "KEY_HASH",
+				"outputs": [
+					{
+						"internalType": "bytes32",
+						"name": "",
+						"type": "bytes32"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "MAXIMUM_NUMBER_OF_PRIZES_PER_RAFFLE",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "MAXIMUM_NUMBER_OF_WINNERS_PER_RAFFLE",
+				"outputs": [
+					{
+						"internalType": "uint40",
+						"name": "",
+						"type": "uint40"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "MAXIMUM_PROTOCOL_FEE_BP",
+				"outputs": [
+					{
+						"internalType": "uint16",
+						"name": "",
+						"type": "uint16"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "ONE_DAY",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "ONE_HUNDRED_PERCENT_BP",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "ONE_WEEK",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "PRICING_OPTIONS_PER_RAFFLE",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "REQUEST_CONFIRMATIONS",
+				"outputs": [
+					{
+						"internalType": "uint16",
+						"name": "",
+						"type": "uint16"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "SUBSCRIPTION_ID",
+				"outputs": [
+					{
+						"internalType": "uint64",
+						"name": "",
+						"type": "uint64"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "VRF_COORDINATOR",
+				"outputs": [
+					{
+						"internalType": "contract VRFCoordinatorV2Interface",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "WETH",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "raffleId",
+						"type": "uint256"
+					}
+				],
+				"name": "cancel",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "raffleId",
+						"type": "uint256"
+					}
+				],
+				"name": "cancelAfterRandomnessRequest",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "cancelOwnershipTransfer",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "raffleId",
+						"type": "uint256"
+					}
+				],
+				"name": "claimFees",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"components": [
+							{
+								"internalType": "uint256",
+								"name": "raffleId",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256[]",
+								"name": "winnerIndices",
+								"type": "uint256[]"
+							}
+						],
+						"internalType": "struct IRaffle.ClaimPrizesCalldata[]",
+						"name": "claimPrizesCalldata",
+						"type": "tuple[]"
+					}
+				],
+				"name": "claimPrizes",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "currency",
+						"type": "address"
+					}
+				],
+				"name": "claimProtocolFees",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256[]",
+						"name": "raffleIds",
+						"type": "uint256[]"
+					}
+				],
+				"name": "claimRefund",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "confirmOwnershipRenouncement",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "confirmOwnershipTransfer",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"components": [
+							{
+								"internalType": "uint40",
+								"name": "cutoffTime",
+								"type": "uint40"
+							},
+							{
+								"internalType": "bool",
+								"name": "isMinimumEntriesFixed",
+								"type": "bool"
+							},
+							{
+								"internalType": "uint40",
+								"name": "minimumEntries",
+								"type": "uint40"
+							},
+							{
+								"internalType": "uint40",
+								"name": "maximumEntriesPerParticipant",
+								"type": "uint40"
+							},
+							{
+								"internalType": "uint16",
+								"name": "protocolFeeBp",
+								"type": "uint16"
+							},
+							{
+								"internalType": "address",
+								"name": "feeTokenAddress",
+								"type": "address"
+							},
+							{
+								"components": [
+									{
+										"internalType": "uint40",
+										"name": "winnersCount",
+										"type": "uint40"
+									},
+									{
+										"internalType": "uint40",
+										"name": "cumulativeWinnersCount",
+										"type": "uint40"
+									},
+									{
+										"internalType": "enum IRaffle.TokenType",
+										"name": "prizeType",
+										"type": "uint8"
+									},
+									{
+										"internalType": "uint8",
+										"name": "prizeTier",
+										"type": "uint8"
+									},
+									{
+										"internalType": "address",
+										"name": "prizeAddress",
+										"type": "address"
+									},
+									{
+										"internalType": "uint256",
+										"name": "prizeId",
+										"type": "uint256"
+									},
+									{
+										"internalType": "uint256",
+										"name": "prizeAmount",
+										"type": "uint256"
+									}
+								],
+								"internalType": "struct IRaffle.Prize[]",
+								"name": "prizes",
+								"type": "tuple[]"
+							},
+							{
+								"components": [
+									{
+										"internalType": "uint40",
+										"name": "entriesCount",
+										"type": "uint40"
+									},
+									{
+										"internalType": "uint208",
+										"name": "price",
+										"type": "uint208"
+									}
+								],
+								"internalType": "struct IRaffle.PricingOption[5]",
+								"name": "pricingOptions",
+								"type": "tuple[5]"
+							}
+						],
+						"internalType": "struct IRaffle.CreateRaffleCalldata",
+						"name": "params",
+						"type": "tuple"
+					}
+				],
+				"name": "createRaffle",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "raffleId",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "raffleId",
+						"type": "uint256"
+					}
+				],
+				"name": "depositPrizes",
+				"outputs": [],
+				"stateMutability": "payable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"components": [
+							{
+								"internalType": "uint256",
+								"name": "raffleId",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "pricingOptionIndex",
+								"type": "uint256"
+							}
+						],
+						"internalType": "struct IRaffle.EntryCalldata[]",
+						"name": "entries",
+						"type": "tuple[]"
+					}
+				],
+				"name": "enterRaffles",
+				"outputs": [],
+				"stateMutability": "payable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "raffleId",
+						"type": "uint256"
+					}
+				],
+				"name": "getEntries",
+				"outputs": [
+					{
+						"components": [
+							{
+								"internalType": "uint40",
+								"name": "currentEntryIndex",
+								"type": "uint40"
+							},
+							{
+								"internalType": "address",
+								"name": "participant",
+								"type": "address"
+							}
+						],
+						"internalType": "struct IRaffle.Entry[]",
+						"name": "entries",
+						"type": "tuple[]"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "raffleId",
+						"type": "uint256"
+					}
+				],
+				"name": "getPricingOptions",
+				"outputs": [
+					{
+						"components": [
+							{
+								"internalType": "uint40",
+								"name": "entriesCount",
+								"type": "uint40"
+							},
+							{
+								"internalType": "uint208",
+								"name": "price",
+								"type": "uint208"
+							}
+						],
+						"internalType": "struct IRaffle.PricingOption[5]",
+						"name": "pricingOptions",
+						"type": "tuple[5]"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "raffleId",
+						"type": "uint256"
+					}
+				],
+				"name": "getPrizes",
+				"outputs": [
+					{
+						"components": [
+							{
+								"internalType": "uint40",
+								"name": "winnersCount",
+								"type": "uint40"
+							},
+							{
+								"internalType": "uint40",
+								"name": "cumulativeWinnersCount",
+								"type": "uint40"
+							},
+							{
+								"internalType": "enum IRaffle.TokenType",
+								"name": "prizeType",
+								"type": "uint8"
+							},
+							{
+								"internalType": "uint8",
+								"name": "prizeTier",
+								"type": "uint8"
+							},
+							{
+								"internalType": "address",
+								"name": "prizeAddress",
+								"type": "address"
+							},
+							{
+								"internalType": "uint256",
+								"name": "prizeId",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "prizeAmount",
+								"type": "uint256"
+							}
+						],
+						"internalType": "struct IRaffle.Prize[]",
+						"name": "prizes",
+						"type": "tuple[]"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "raffleId",
+						"type": "uint256"
+					}
+				],
+				"name": "getWinners",
+				"outputs": [
+					{
+						"components": [
+							{
+								"internalType": "address",
+								"name": "participant",
+								"type": "address"
+							},
+							{
+								"internalType": "bool",
+								"name": "claimed",
+								"type": "bool"
+							},
+							{
+								"internalType": "uint8",
+								"name": "prizeIndex",
+								"type": "uint8"
+							},
+							{
+								"internalType": "uint40",
+								"name": "entryIndex",
+								"type": "uint40"
+							}
+						],
+						"internalType": "struct IRaffle.Winner[]",
+						"name": "winners",
+						"type": "tuple[]"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "initiateOwnershipRenouncement",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "newPotentialOwner",
+						"type": "address"
+					}
+				],
+				"name": "initiateOwnershipTransfer",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"name": "isCurrencyAllowed",
+				"outputs": [
+					{
+						"internalType": "bool",
+						"name": "",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bytes",
+						"name": "",
+						"type": "bytes"
+					}
+				],
+				"name": "onERC1155Received",
+				"outputs": [
+					{
+						"internalType": "bytes4",
+						"name": "",
+						"type": "bytes4"
+					}
+				],
+				"stateMutability": "pure",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "owner",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "ownershipStatus",
+				"outputs": [
+					{
+						"internalType": "enum IOwnableTwoSteps.Status",
+						"name": "",
+						"type": "uint8"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "paused",
+				"outputs": [
+					{
+						"internalType": "bool",
+						"name": "",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "potentialOwner",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "protocolFeeBp",
+				"outputs": [
+					{
+						"internalType": "uint16",
+						"name": "",
+						"type": "uint16"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "protocolFeeRecipient",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"name": "protocolFeeRecipientClaimableFees",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"name": "raffles",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "owner",
+						"type": "address"
+					},
+					{
+						"internalType": "enum IRaffle.RaffleStatus",
+						"name": "status",
+						"type": "uint8"
+					},
+					{
+						"internalType": "bool",
+						"name": "isMinimumEntriesFixed",
+						"type": "bool"
+					},
+					{
+						"internalType": "uint40",
+						"name": "cutoffTime",
+						"type": "uint40"
+					},
+					{
+						"internalType": "uint40",
+						"name": "drawnAt",
+						"type": "uint40"
+					},
+					{
+						"internalType": "uint40",
+						"name": "minimumEntries",
+						"type": "uint40"
+					},
+					{
+						"internalType": "uint40",
+						"name": "maximumEntriesPerParticipant",
+						"type": "uint40"
+					},
+					{
+						"internalType": "address",
+						"name": "feeTokenAddress",
+						"type": "address"
+					},
+					{
+						"internalType": "uint16",
+						"name": "protocolFeeBp",
+						"type": "uint16"
+					},
+					{
+						"internalType": "uint208",
+						"name": "claimableFees",
+						"type": "uint208"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "rafflesCount",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"name": "rafflesParticipantsStats",
+				"outputs": [
+					{
+						"internalType": "uint208",
+						"name": "amountPaid",
+						"type": "uint208"
+					},
+					{
+						"internalType": "uint40",
+						"name": "entriesCount",
+						"type": "uint40"
+					},
+					{
+						"internalType": "bool",
+						"name": "refunded",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"name": "randomnessRequests",
+				"outputs": [
+					{
+						"internalType": "bool",
+						"name": "exists",
+						"type": "bool"
+					},
+					{
+						"internalType": "uint248",
+						"name": "randomWord",
+						"type": "uint248"
+					},
+					{
+						"internalType": "uint256",
+						"name": "raffleId",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "requestId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256[]",
+						"name": "randomWords",
+						"type": "uint256[]"
+					}
+				],
+				"name": "rawFulfillRandomWords",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "requestId",
+						"type": "uint256"
+					}
+				],
+				"name": "selectWinners",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint16",
+						"name": "_protocolFeeBp",
+						"type": "uint16"
+					}
+				],
+				"name": "setProtocolFeeBp",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_protocolFeeRecipient",
+						"type": "address"
+					}
+				],
+				"name": "setProtocolFeeRecipient",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "togglePaused",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address[]",
+						"name": "currencies",
+						"type": "address[]"
+					},
+					{
+						"internalType": "bool",
+						"name": "isAllowed",
+						"type": "bool"
+					}
+				],
+				"name": "updateCurrenciesStatus",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "raffleId",
+						"type": "uint256"
+					}
+				],
+				"name": "withdrawPrizes",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"author": "LooksRare protocol team (👀,💎)",
+			"kind": "dev",
+			"methods": {
+				"cancel(uint256)": {
+					"params": {
+						"raffleId": "The id of the raffle."
+					}
+				},
+				"cancelAfterRandomnessRequest(uint256)": {
+					"params": {
+						"raffleId": "The id of the raffle."
+					}
+				},
+				"cancelOwnershipTransfer()": {
+					"details": "This function can be used for both cancelling a transfer to a new owner and      cancelling the renouncement of the ownership."
+				},
+				"claimFees(uint256)": {
+					"params": {
+						"raffleId": "The id of the raffle."
+					}
+				},
+				"claimPrizes((uint256,uint256[])[])": {
+					"params": {
+						"claimPrizesCalldata": "The calldata for claiming prizes."
+					}
+				},
+				"claimProtocolFees(address)": {
+					"params": {
+						"currency": "The currency of the fees to be claimed."
+					}
+				},
+				"claimRefund(uint256[])": {
+					"details": "Refundable and Cancelled are the only statuses that allow refunds.",
+					"params": {
+						"raffleIds": "The ids of the raffles."
+					}
+				},
+				"confirmOwnershipTransfer()": {
+					"details": "This function can only be called by the current potential owner."
+				},
+				"constructor": {
+					"params": {
+						"_keyHash": "Chainlink VRF key hash",
+						"_owner": "The owner of the contract",
+						"_protocolFeeBp": "The protocol fee in basis points",
+						"_protocolFeeRecipient": "The recipient of the protocol fees",
+						"_subscriptionId": "Chainlink VRF subscription ID",
+						"_vrfCoordinator": "Chainlink VRF coordinator address",
+						"_weth": "The WETH address"
+					}
+				},
+				"createRaffle((uint40,bool,uint40,uint40,uint16,address,(uint40,uint40,uint8,uint8,address,uint256,uint256)[],(uint40,uint208)[5]))": {
+					"details": "This function can still be called when the contract is paused because the raffle creator      would not be able to deposit prizes and open the raffle anyway. The restriction to disallow      raffles creation when the contract is paused will be enforced in the frontend.",
+					"params": {
+						"params": "The parameters of the raffle."
+					},
+					"returns": {
+						"raffleId": "The id of the newly created raffle."
+					}
+				},
+				"depositPrizes(uint256)": {
+					"params": {
+						"raffleId": "The id of the raffle."
+					}
+				},
+				"enterRaffles((uint256,uint256)[])": {
+					"params": {
+						"entries": "The entries to be made."
+					}
+				},
+				"getEntries(uint256)": {
+					"params": {
+						"raffleId": "The id of the raffle."
+					},
+					"returns": {
+						"entries": "The entries entered for the raffle."
+					}
+				},
+				"getPricingOptions(uint256)": {
+					"params": {
+						"raffleId": "The id of the raffle."
+					},
+					"returns": {
+						"pricingOptions": "The pricing options for the raffle."
+					}
+				},
+				"getPrizes(uint256)": {
+					"params": {
+						"raffleId": "The id of the raffle."
+					},
+					"returns": {
+						"prizes": "The prizes to be distributed."
+					}
+				},
+				"getWinners(uint256)": {
+					"params": {
+						"raffleId": "The id of the raffle."
+					},
+					"returns": {
+						"winners": "The winners of the raffle."
+					}
+				},
+				"initiateOwnershipTransfer(address)": {
+					"params": {
+						"newPotentialOwner": "New potential owner address"
+					}
+				},
+				"onERC1155Received(address,address,uint256,uint256,bytes)": {
+					"details": "This function is required in order for the contract to receive ERC-1155 tokens."
+				},
+				"paused()": {
+					"details": "Returns true if the contract is paused, and false otherwise."
+				},
+				"selectWinners(uint256)": {
+					"params": {
+						"requestId": "The request id returned by Chainlink."
+					}
+				},
+				"setProtocolFeeBp(uint16)": {
+					"params": {
+						"protocolFeeBp": "The protocol fee in basis points."
+					}
+				},
+				"setProtocolFeeRecipient(address)": {
+					"params": {
+						"protocolFeeRecipient": "The protocol fee recipient."
+					}
+				},
+				"updateCurrenciesStatus(address[],bool)": {
+					"details": "Only callable by owner.",
+					"params": {
+						"currencies": "Currency addresses (address(0) for ETH)",
+						"isAllowed": "Whether the currencies should be allowed for trading"
+					}
+				},
+				"withdrawPrizes(uint256)": {
+					"params": {
+						"raffleId": "The id of the raffle."
+					}
+				}
+			},
+			"stateVariables": {
+				"protocolFeeRecipientClaimableFees": {
+					"details": "The key is the currency address."
+				},
+				"raffles": {
+					"details": "The key is the raffle ID."
+				},
+				"rafflesParticipantsStats": {
+					"details": "The key is the raffle ID and the nested key is the participant address."
+				},
+				"randomnessRequests": {
+					"details": "The key is the request ID returned by Chainlink."
+				}
+			},
+			"title": "Raffle",
+			"version": 1
+		},
+		"userdoc": {
+			"errors": {
+				"ERC1155SafeTransferFromFail()": [
+					{
+						"notice": "It is emitted if the ERC1155 safeTransferFrom fails."
+					}
+				],
+				"ERC20TransferFail()": [
+					{
+						"notice": "It is emitted if the ERC20 transfer fails."
+					}
+				],
+				"ERC20TransferFromFail()": [
+					{
+						"notice": "It is emitted if the ERC20 transferFrom fails."
+					}
+				],
+				"ERC721TransferFromFail()": [
+					{
+						"notice": "It is emitted if the ERC721 transferFrom fails."
+					}
+				],
+				"NoOngoingTransferInProgress()": [
+					{
+						"notice": "This is returned when there is no transfer of ownership in progress."
+					}
+				],
+				"NotAContract()": [
+					{
+						"notice": "It is emitted if the call recipient is not a contract."
+					}
+				],
+				"NotOwner()": [
+					{
+						"notice": "This is returned when the caller is not the owner."
+					}
+				],
+				"ReentrancyFail()": [
+					{
+						"notice": "This is returned when there is a reentrant call."
+					}
+				],
+				"RenouncementNotInProgress()": [
+					{
+						"notice": "This is returned when there is no renouncement in progress but         the owner tries to validate the ownership renouncement."
+					}
+				],
+				"TransferAlreadyInProgress()": [
+					{
+						"notice": "This is returned when the transfer is already in progress but the owner tries         initiate a new ownership transfer."
+					}
+				],
+				"TransferNotInProgress()": [
+					{
+						"notice": "This is returned when there is no ownership transfer in progress but the         ownership change tries to be approved."
+					}
+				],
+				"WrongPotentialOwner()": [
+					{
+						"notice": "This is returned when the ownership transfer is attempted to be validated by the         a caller that is not the potential owner."
+					}
+				]
+			},
+			"events": {
+				"CancelOwnershipTransfer()": {
+					"notice": "This is emitted if the ownership transfer is cancelled."
+				},
+				"InitiateOwnershipRenouncement()": {
+					"notice": "This is emitted if the ownership renouncement is initiated."
+				},
+				"InitiateOwnershipTransfer(address,address)": {
+					"notice": "This is emitted if the ownership transfer is initiated."
+				},
+				"NewOwner(address)": {
+					"notice": "This is emitted when there is a new owner."
+				}
+			},
+			"kind": "user",
+			"methods": {
+				"KEY_HASH()": {
+					"notice": "The key hash of the Chainlink VRF."
+				},
+				"MAXIMUM_NUMBER_OF_PRIZES_PER_RAFFLE()": {
+					"notice": "The maximum number of prizes per raffle.         Each individual ERC-721 counts as one prize.         Each ETH/ERC-20/ERC-1155 with winnersCount > 1 counts as one prize."
+				},
+				"MAXIMUM_NUMBER_OF_WINNERS_PER_RAFFLE()": {
+					"notice": "The maximum number of winners per raffle."
+				},
+				"MAXIMUM_PROTOCOL_FEE_BP()": {
+					"notice": "The maximum protocol fee in basis points, which is 25%."
+				},
+				"ONE_HUNDRED_PERCENT_BP()": {
+					"notice": "100% in basis points."
+				},
+				"PRICING_OPTIONS_PER_RAFFLE()": {
+					"notice": "The number of pricing options per raffle."
+				},
+				"REQUEST_CONFIRMATIONS()": {
+					"notice": "A Chainlink node should wait for 3 confirmations before responding."
+				},
+				"SUBSCRIPTION_ID()": {
+					"notice": "The subscription ID of the Chainlink VRF."
+				},
+				"VRF_COORDINATOR()": {
+					"notice": "The Chainlink VRF coordinator."
+				},
+				"cancel(uint256)": {
+					"notice": "Cancels a raffle beyond cut-off time without meeting minimum entries."
+				},
+				"cancelAfterRandomnessRequest(uint256)": {
+					"notice": "Cancels a raffle after randomness request if the randomness request         does not arrive after a certain amount of time.         Only callable by contract owner."
+				},
+				"cancelOwnershipTransfer()": {
+					"notice": "This function is used to cancel the ownership transfer."
+				},
+				"claimFees(uint256)": {
+					"notice": "Claims the fees collected for a raffle."
+				},
+				"claimPrizes((uint256,uint256[])[])": {
+					"notice": "Claims the prizes for a winner. A winner can claim multiple prizes         from multiple raffles in a single transaction."
+				},
+				"claimProtocolFees(address)": {
+					"notice": "Claims the protocol fees collected for a raffle."
+				},
+				"claimRefund(uint256[])": {
+					"notice": "Claims the refund for a cancelled raffle."
+				},
+				"confirmOwnershipRenouncement()": {
+					"notice": "This function is used to confirm the ownership renouncement."
+				},
+				"confirmOwnershipTransfer()": {
+					"notice": "This function is used to confirm the ownership transfer."
+				},
+				"createRaffle((uint40,bool,uint40,uint40,uint16,address,(uint40,uint40,uint8,uint8,address,uint256,uint256)[],(uint40,uint208)[5]))": {
+					"notice": "Creates a new raffle."
+				},
+				"depositPrizes(uint256)": {
+					"notice": "Deposits prizes for a raffle."
+				},
+				"enterRaffles((uint256,uint256)[])": {
+					"notice": "Enters a raffle or multiple raffles."
+				},
+				"getEntries(uint256)": {
+					"notice": "Gets the entries for a raffle."
+				},
+				"getPricingOptions(uint256)": {
+					"notice": "Gets the pricing options for a raffle."
+				},
+				"getPrizes(uint256)": {
+					"notice": "Gets the prizes for a raffle."
+				},
+				"getWinners(uint256)": {
+					"notice": "Gets the winners for a raffle."
+				},
+				"initiateOwnershipRenouncement()": {
+					"notice": "This function is used to initiate the ownership renouncement."
+				},
+				"initiateOwnershipTransfer(address)": {
+					"notice": "This function is used to initiate the transfer of ownership to a new owner."
+				},
+				"isCurrencyAllowed(address)": {
+					"notice": "It checks whether the currency is allowed."
+				},
+				"owner()": {
+					"notice": "Address of the current owner."
+				},
+				"ownershipStatus()": {
+					"notice": "Ownership status."
+				},
+				"potentialOwner()": {
+					"notice": "Address of the potential owner."
+				},
+				"protocolFeeBp()": {
+					"notice": "The protocol fee in basis points."
+				},
+				"protocolFeeRecipient()": {
+					"notice": "The protocol fee recipient."
+				},
+				"protocolFeeRecipientClaimableFees(address)": {
+					"notice": "The claimable fees of the protocol fee recipient."
+				},
+				"raffles(uint256)": {
+					"notice": "The raffles created."
+				},
+				"rafflesCount()": {
+					"notice": "The number of raffles created."
+				},
+				"rafflesParticipantsStats(uint256,address)": {
+					"notice": "The participants stats of the raffles."
+				},
+				"randomnessRequests(uint256)": {
+					"notice": "The randomness requests."
+				},
+				"selectWinners(uint256)": {
+					"notice": "Select the winners for a raffle based on the random words returned by Chainlink."
+				},
+				"setProtocolFeeBp(uint16)": {
+					"notice": "Sets the protocol fee in basis points. Only callable by contract owner."
+				},
+				"setProtocolFeeRecipient(address)": {
+					"notice": "Sets the protocol fee recipient. Only callable by contract owner."
+				},
+				"togglePaused()": {
+					"notice": "Toggle the contract's paused status. Only callable by contract owner."
+				},
+				"updateCurrenciesStatus(address[],bool)": {
+					"notice": "This function allows the owner to update currency statuses."
+				},
+				"withdrawPrizes(uint256)": {
+					"notice": "Withdraws the prizes for a raffle after it has been marked as refundable."
+				}
+			},
+			"notice": "This contract allows anyone to permissionlessly host raffles on LooksRare.",
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"tenderly/project/contracts/Raffle.sol": "Raffle"
+		},
+		"evmVersion": "london",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": true,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol": {
+			"keccak256": "0x3d709a5e0f1f9b8841172b10ba8af785dd51a13eda9fc395723a706e51329904",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://038eef992d813c20737fbe94e3a36e5d541d1aa736158dd2a43dd5b840b8c360",
+				"dweb:/ipfs/QmZWJ25Yr1sUSAsfJRKvTMDmGkmy63hHhB495CUL1bpNz4"
+			]
+		},
+		"@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol": {
+			"keccak256": "0x54cdc97717cbae1a51a5500c8ee4875ebf056c95b54d2155a9544a79cb4f4494",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://4bd670a55aacc0ab372835cd7e21b487f9fb69d8c6375234b68862a58f3b1153",
+				"dweb:/ipfs/QmRMdB9TFLgG1LXg9VSTWbZZ1yf3uY1RY3pPkoMN23JfZk"
+			]
+		},
+		"@looksrare/contracts-libs/contracts/OwnableTwoSteps.sol": {
+			"keccak256": "0x0e47e11eb59908f12443c7e23d2f437992da7349d6cef7757f04014eaf82b74e",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://055c0d474b793aec08aa882c93dfe01f5537b479d2730433ce262edfc4a04efb",
+				"dweb:/ipfs/QmP2bwDjHAWjJKTQtKr3imKPiuf7a1M664XzEe8hjKiS6P"
+			]
+		},
+		"@looksrare/contracts-libs/contracts/PackableReentrancyGuard.sol": {
+			"keccak256": "0x5e20192cd10aaf26e371376508c532222ee5e363ac3a79f5a44247e003c793bc",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://8fafb52efa2e421a2f38c7cc6a31a7923d015cd0fab87d5de40e93d957e48dda",
+				"dweb:/ipfs/QmUJtErrJpkdwqvy7HYmp1UbkzC6hcbDn8gavwivJ8U1Wd"
+			]
+		},
+		"@looksrare/contracts-libs/contracts/Pausable.sol": {
+			"keccak256": "0x66b33793a91c5577f98ab957f1f119e4c50c8590cd76d159827f40c609f50992",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://1c1d9de2d00d6ea984e592fcfc5c8b4a517896dfce0e568a2fb52d00edd2101d",
+				"dweb:/ipfs/QmbGR36gEHqmSYEiwgotyTmCC8K4yHNBj7WJUgNdMFQwLB"
+			]
+		},
+		"@looksrare/contracts-libs/contracts/errors/GenericErrors.sol": {
+			"keccak256": "0x2d00fcb3932e29183219f7ebe1f3f8838a3557ecb8342ce3eefd9829621f94a2",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://ea132ecfb19f8fb55e1ae19bd58397e83d1e31837ac0f0609ef5a589e1c2ec1e",
+				"dweb:/ipfs/QmPdSU3KGau8pij1wG95ZaZMpvwwAKRBeg13S2P9mBmG77"
+			]
+		},
+		"@looksrare/contracts-libs/contracts/errors/LowLevelErrors.sol": {
+			"keccak256": "0xe0271fbb819d21636f2df9764b2b75cde834760cf70c5a6bf93ff20c6d210262",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://c3dc150f838458352394eba77c4885c00605114d7b60d47adefa8e7a813fd1cc",
+				"dweb:/ipfs/QmdMhtVfufjjNzc6UUQymv69TDKVvtD3KyPSCyqSTxKWr7"
+			]
+		},
+		"@looksrare/contracts-libs/contracts/interfaces/IOwnableTwoSteps.sol": {
+			"keccak256": "0x9ec76240061a336b8cd10a3ab1d21d8fcc6807e13b95d01c84b6282c88080379",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://e737caefdb8fe8fbf5b657e92f7a0b6a7d34cb0a1e1567172ff2e1d16174b623",
+				"dweb:/ipfs/QmRFcz4vu86evsfUzpwyvvAKtWJe2mi3CfCD551eVRvupT"
+			]
+		},
+		"@looksrare/contracts-libs/contracts/interfaces/IReentrancyGuard.sol": {
+			"keccak256": "0xee628855706297e69737af64cf697bb21aedfbd16a6c470a1d8772ec9734cb46",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://f639938e5303ea34b5d1c617497366fb4e5346a1ebb1edc2a324c347b603d9b7",
+				"dweb:/ipfs/QmPF46PT9a9zU23sUH3d3YvEZG4hnqbP24WSQvkMHPRx8S"
+			]
+		},
+		"@looksrare/contracts-libs/contracts/interfaces/generic/IERC1155.sol": {
+			"keccak256": "0x3731007cd9075c0cf80ff8092421ac29c9c0014bb4a2a2f6a6e8fcbec1c243d9",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://b048a1087e2eb9cd968227131dc3697ca2fe1d06d88649fd3678dfbf8f2b6d04",
+				"dweb:/ipfs/QmPDRpbb38nAvn9Ptaz8fn7rrzxAoCbPZo5M59Kgiq6q8Q"
+			]
+		},
+		"@looksrare/contracts-libs/contracts/interfaces/generic/IERC20.sol": {
+			"keccak256": "0x00de5900712b4cf6d4eb739d325f83aec5a357b25571aaae440aad43eb1e4f05",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://c92e7d221e92cb3e102f16ebeaa948e02a0ace684d17aec40ae7ff3de8ce8f0d",
+				"dweb:/ipfs/QmUUbqrh3mhtRNsZdQ44yk3yw99Xpkx1RaGQnANduTTJBj"
+			]
+		},
+		"@looksrare/contracts-libs/contracts/interfaces/generic/IERC721.sol": {
+			"keccak256": "0x806cc2571b8858cfd077a235304798306763d547223f838a300e12037bec7c73",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://3d03bab59e13668c2c091e966de9ba179970f6ec93d2c5aa47f16f85554cdc26",
+				"dweb:/ipfs/QmeVrWKAe1DQuqaXuFpj7zwCr8z2TZtxfncdYPenCCasfn"
+			]
+		},
+		"@looksrare/contracts-libs/contracts/interfaces/generic/IWETH.sol": {
+			"keccak256": "0xa3ab534f52c32cb4beded86e0125eab755f9ae7452efd30b5ff33e2e016c127d",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://f87fb30208682737331ad355bd0f7061259ec960a8234cf21ae1899a10682cd1",
+				"dweb:/ipfs/QmXA4PirJk1j8uNERnbK9MfPehzLP6kFhkVfd41NaeZaaJ"
+			]
+		},
+		"@looksrare/contracts-libs/contracts/lowLevelCallers/LowLevelERC1155Transfer.sol": {
+			"keccak256": "0x7dd9ad1e4342e3c61a044a66774c3db0e3ef02d9a0717419efbcb9b15c4eab8c",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://dac542f6af582bdc5a5ce541936db129642b75d7087850c8e63d12748feee7bc",
+				"dweb:/ipfs/QmY17rX9T3pqEWgG8n97zGBrqZmh52SscBmArCam6giGrP"
+			]
+		},
+		"@looksrare/contracts-libs/contracts/lowLevelCallers/LowLevelERC20Transfer.sol": {
+			"keccak256": "0x2f3561ba45f4ab530212d9e560a0d9226e0a431503506acdb6c69c45dc9990b8",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://491b6c01c4800224cff4967224162661b0978395ce6cf1e6806e0348adc8e027",
+				"dweb:/ipfs/QmUDRVjGi49cmcctBhCW3EBT9iMqw7ULcFh4brFMtCorwW"
+			]
+		},
+		"@looksrare/contracts-libs/contracts/lowLevelCallers/LowLevelERC721Transfer.sol": {
+			"keccak256": "0xeded2dfc20ac8e043714d5923847697e753869ec9dd68503650147e68f979713",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://2cbfb62cd68ac0178faeeb23b97e1e9149f98ff6612e3e7266e6468304c12114",
+				"dweb:/ipfs/QmamQPWhCyaagY6jvtd8JDnjD2R7UMFGQHSy5CbXDGs2fM"
+			]
+		},
+		"@looksrare/contracts-libs/contracts/lowLevelCallers/LowLevelWETH.sol": {
+			"keccak256": "0xf6a850fd86fad68b9beb6e589b6d58df4585792e2bf7fb6e3c29002b469a8dab",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://cc06a6f9cefe29270bdc8b58e44938be8455555f767ffca6ed5759c179f086e6",
+				"dweb:/ipfs/QmcrR7x5Xsd2piLyGGnwJ38c4rhbznSjjYrcRJYEbA9pRT"
+			]
+		},
+		"@openzeppelin/contracts/utils/math/Math.sol": {
+			"keccak256": "0xa1e8e83cd0087785df04ac79fb395d9f3684caeaf973d9e2c71caef723a3a5d6",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://33bbf48cc069be677705037ba7520c22b1b622c23b33e1a71495f2d36549d40b",
+				"dweb:/ipfs/Qmct36zWXv3j7LZB83uwbg7TXwnZSN1fqHNDZ93GG98bGz"
+			]
+		},
+		"tenderly/project/contracts/Raffle.sol": {
+			"keccak256": "0xda03d6f47d8846f4cb5d5cd90deeed35c96418d667f4dfa649f3556680aab650",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://b48f21bf95357d91476391d4b7a1815e983dc51314836180d404e2405eb67319",
+				"dweb:/ipfs/QmeNKdYULZ5qsW3koRwEqdGcZk974i2QiS2GD5e4bSXSqP"
+			]
+		},
+		"tenderly/project/contracts/WinningEntrySearchLogic.sol": {
+			"keccak256": "0x53abc03bc1dd8cfafd37128cd5a13be2bd77f740bcfd9ce5c248431b33509a99",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://6e4837e1174e42c70506946b8cfcce5ebd4309653c79ad115ed327359b72410e",
+				"dweb:/ipfs/QmWo3DF5kDoRhckcKP4qxUArU4rA6gvrtbMCjDJB7fUL1H"
+			]
+		},
+		"tenderly/project/contracts/interfaces/IRaffle.sol": {
+			"keccak256": "0x77140cbd7a3693109634e49ff0474384740906764f06575e9acd51c779a1f224",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://0242bb264c0ae24cc513e908abf3cc20f1a86288a0f07353798a3e89230184de",
+				"dweb:/ipfs/QmTmLNoTQKo6GzTWhmu7unwT1wwFUmAWHKG9cgXgrLnteS"
+			]
+		},
+		"tenderly/project/contracts/libraries/Arrays.sol": {
+			"keccak256": "0x92ba836f3d7cca69bcee213fd0551af507762b7b65456d54aa6d43bcb350526a",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://171695f3babf4724b01727f5aa565d9196e2ae4382162d394047d6f554daef4b",
+				"dweb:/ipfs/QmdpJGm6kwenfsBTmJKi7ALzUgHi9qmGbvAk6mCf2mRLwR"
+			]
+		}
+	},
+	"version": 1
+}

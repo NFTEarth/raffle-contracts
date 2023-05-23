@@ -1,0 +1,48 @@
+{
+	"compiler": {
+		"version": "0.8.17+commit.8df45f5f"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [],
+		"devdoc": {
+			"author": "LooksRare protocol team (👀,💎)",
+			"kind": "dev",
+			"methods": {},
+			"title": "WinningEntrySearchLogic",
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"notice": "This contract contains the logic to search for a winning entry.",
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"tenderly/project/contracts/WinningEntrySearchLogic.sol": "WinningEntrySearchLogic"
+		},
+		"evmVersion": "london",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": true,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"tenderly/project/contracts/WinningEntrySearchLogic.sol": {
+			"keccak256": "0x53abc03bc1dd8cfafd37128cd5a13be2bd77f740bcfd9ce5c248431b33509a99",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://6e4837e1174e42c70506946b8cfcce5ebd4309653c79ad115ed327359b72410e",
+				"dweb:/ipfs/QmWo3DF5kDoRhckcKP4qxUArU4rA6gvrtbMCjDJB7fUL1H"
+			]
+		}
+	},
+	"version": 1
+}
